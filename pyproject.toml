@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "game-playing-ai"
+version = "0.1.0"
+description = ""
+authors = ["abbymark <abbymark@naver.com>"]
+readme = "README.md"
+packages = [{include = "game_playing_ai"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "1.13.1"
+pygame = "^2.5.2"
+gymnasium = "^0.29.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
