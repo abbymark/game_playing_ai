@@ -1,13 +1,13 @@
 import pygame
 import sys
-from game_playing_ai.environments.environment import Environment
-from game_playing_ai.ai.agents.preprogrammed_agent.agent import PreprogrammedAgent
-from game_playing_ai.ai.agents.playable_agent.agent import PlayableAgent
-from game_playing_ai.environments.game_items.food import Food
+from game_playing_ai.games.food_game.game_items.environment import Environment
+from game_playing_ai.games.food_game.agents.preprogrammed_agent.agent import PreprogrammedAgent
+from game_playing_ai.games.food_game.agents.playable_agent.agent import PlayableAgent
+from game_playing_ai.games.food_game.game_items.food import Food
 import random
 
 
-class GameStarter:
+class FoodGame:
     WIDTH = 800
     HEIGHT = 600
 
@@ -28,9 +28,6 @@ class GameStarter:
         
         preprogrammed_agent_pos = (random.randint(0, self.environment.cols - 1), random.randint(0, self.environment.rows - 1))
         self.preprogrammed_agent = PreprogrammedAgent(self.screen, 30, 40, preprogrammed_agent_pos[0], preprogrammed_agent_pos[1])
-
-
-
 
         # Food
         self.food = []
