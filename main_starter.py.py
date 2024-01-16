@@ -40,7 +40,7 @@ class GameStarter:
                 self.update(events)
                 self.draw()
             elif self.state == "food_game":
-                food_game = FoodGame()
+                food_game = FoodGame(render_mode="human")
                 food_game.run()
                 self.state = "menu"
             elif self.state == "team_game":

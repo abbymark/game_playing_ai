@@ -1,41 +1,42 @@
 import pygame
 
-class PlayableAgent(pygame.sprite.Sprite):
-    def __init__(self, screen, rows, cols, x, y):
-        super().__init__()
-        self.screen = screen
+import random
+class PlayableAgent:
+    def __init__(self, rows, cols, pos = None):
         self.rows = rows
         self.cols = cols
-        self.cell_width = self.screen.get_width() / self.cols
-        self.cell_height = self.screen.get_height() / self.rows
-        self.image = pygame.Surface((self.cell_width, self.cell_height))
-        self.image.fill((255, 255, 0))
-        self.rect = self.image.get_rect()
-
-        # Set the position of the agent (for example, at the center of the cell)
-        self.rect.x = x * self.cell_width
-        self.rect.y = y * self.cell_height
-
-    def draw(self):
-        self.screen.blit(self.image, self.rect)
+        if pos is None:
+            self.x = random.randint(0, cols - 1)
+            self.y = random.randint(0, rows - 1)
+        else:
+            self.x = pos[0]
+            self.y = pos[1]
 
     def update(self, events):
         for event in events:
             if event.type == pygame.KEYDOWN:
-                new_x = self.rect.x
-                new_y = self.rect.y
-
+                new_x = self.x
+                new_y = self.y
                 if event.key == pygame.K_LEFT:
-                    new_x -= self.cell_width
+                    new_x -= 1
                 elif event.key == pygame.K_RIGHT:
-                    new_x += self.cell_width
+                    new_x += 1
                 elif event.key == pygame.K_UP:
-                    new_y -= self.cell_height
+                    new_y -= 1
                 elif event.key == pygame.K_DOWN:
-                    new_y += self.cell_height
+                    new_y += 1
 
                 # Check if new position is within bounds
-                if 0 <= new_x < self.screen.get_width() and 0 <= new_y < self.screen.get_height():
+                if 0 <= new_x < self.cols and 0 <= new_y < self.rows:
                     # Update position if within bounds
-                    self.rect.x = new_x
-                    self.rect.y = new_y
+                    self.x = new_x
+                    self.y = new_y
+    
+    @property
+    def pos(self):
+        return (self.x, self.y)
+    
+    @pos.setter
+    def pos(self, pos):
+        self.x = pos[0]
+        self.y = pos[1]
