@@ -48,20 +48,23 @@ class FoodGame:
 
 
         # Agents
-        self.playable_agent = PlayableAgent(30, 40)
         
-        self.preprogrammed_agent = PreprogrammedAgent(30, 40)
-
         # if not drl_agent_pos:
         #     drl_agent_pos = (random.randint(0, cols - 1), random.randint(0, rows - 1))
         # self.map[drl_agent_pos[1]][drl_agent_pos[0]] = 5
         # self.drl_agent = DQNAgentSprite(self.canvas, 30, 40, drl_agent_pos[0], drl_agent_pos[1])
 
+        self.playable_agent = PlayableAgent(30, 40)
+        self.map = self.playable_agent.set_pos_in_map(self.map)
+        self.preprogrammed_agent = PreprogrammedAgent(30, 40)
+        self.map = self.preprogrammed_agent.set_pos_in_map(self.map)
+
+
 
         # Food
         self.foods = Food.generate_foods(rows, cols, n_food)
         for food in self.foods:
-            self.map[food.y][food.x] = 2
+            self.map = food.set_pos_in_map(self.map)
 
         # Environment
         self.environment = Environment(self.canvas, rows, cols)
@@ -109,16 +112,8 @@ class FoodGame:
 
     def check_collisions(self):
         for food in self.foods:
-            if self.playable_agent.pos == (food.x, food.y):
+            if self.playable_agent.pos == (food.x, food.y) or self.preprogrammed_agent.pos == (food.x, food.y):
                 self.foods.remove(food)
-                # self.map[food.y][food.x] = 0
-                self.foods = Food.generate_foods(30, 40, 1, self.foods)
-                for food in self.foods:
-                    self.map[food.y][food.x] = 2
-                break
-            if self.preprogrammed_agent.pos == (food.x, food.y):
-                self.foods.remove(food)
-                # self.map[food.y][food.x] = 0
                 self.foods = Food.generate_foods(30, 40, 1, self.foods)
                 for food in self.foods:
                     self.map[food.y][food.x] = 2
@@ -136,8 +131,8 @@ class GridFoodGame(gym.Env):
 
         self.observation_space = spaces.Dict(
             {
-                "agent": spaces.Box(low=0, high=max(self.width, self.height), shape=(2,), dtype=int),  # for POMDP, this should be removed
-                "foods": spaces.Box(low=0, high=max(self.width, self.height), shape=(self.n_food, 2), dtype=int),  # Should be relative to agent im POMDP
+                "agent": spaces.Box(low=0, high=max(self.cols-1, self.rows-1), shape=(2,), dtype=int),  # for POMDP, this should be removed
+                "foods": spaces.Box(low=0, high=max(self.cols-1, self.rows-1), shape=(self.n_food, 2), dtype=int),  # Should be relative to agent im POMDP
                 # "opponent": spaces.Box(low=0, high=max(self.width, self.height), shape=(2,), dtype=int)  # for POMDP, this should be removed
             }
         )
@@ -167,12 +162,11 @@ class GridFoodGame(gym.Env):
 
     def reset(self, seed=None):
         super().reset(seed=seed)
+        self._food_collected = 0
 
         self._agent_location = np.array([random.randint(0, self.cols - 1), random.randint(0, self.rows - 1)])
 
         self._food_locations = np.array([[random.randint(0, self.cols - 1), random.randint(0, self.rows - 1)] for _ in range(self.n_food)])
-
-        self._food_collected = 0
 
         while np.any(self._food_locations == self._agent_location):
             self._agent_location = np.array([random.randint(0, self.cols - 1), random.randint(0, self.rows - 1)])

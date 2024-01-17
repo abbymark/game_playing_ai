@@ -21,6 +21,13 @@ class Food():
             foods.append(cls(rows, cols, x, y))
         return foods
     
+    def set_pos_in_map(self, map):
+        while map[self.y][self.x] != 0 and map[self.y][self.x] != 2:
+            self.x = random.randint(0, self.cols - 1)
+            self.y = random.randint(0, self.rows - 1)
+        map[self.y][self.x] = 2
+        return map
+
     @property
     def pos(self):
         return (self.x, self.y)
