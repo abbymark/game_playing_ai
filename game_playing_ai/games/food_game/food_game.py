@@ -1,7 +1,7 @@
 from game_playing_ai.games.food_game.game_items.environment import Environment
 from game_playing_ai.games.food_game.agents.preprogrammed_agent.agent import PreprogrammedAgent
 from game_playing_ai.games.food_game.agents.playable_agent.agent import PlayableAgent
-from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgentSprite
+from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgentSprite, DQNAgent
 from game_playing_ai.games.food_game.game_items.food import Food
 
 import pygame
@@ -22,7 +22,6 @@ import random
 
 
 # TODO:
-# 시작할때 agent 위치가 나와도록 해야함 즉 environment 에 map의 initial state를 넣어줘야함
 # Gym에서 agent pos, food pos를 받아서 게임을 시작하도록 수정
 # self.map 을 통해서 업데이트 와 observation 을 구현
 # observation space에 agent 여러개의 위치 구현
@@ -33,7 +32,7 @@ class FoodGame:
     WIDTH = 800
     HEIGHT = 600
 
-    def __init__(self, rows=30, cols=40, n_food=10, render_mode=None, drl_agent_pos=None, food_pos=None):
+    def __init__(self, rows=30, cols=40, n_food=10, render_mode="human"):
         self.render_mode = render_mode
 
         if self.render_mode == "human":
@@ -43,22 +42,20 @@ class FoodGame:
             self.clock = pygame.time.Clock()
             self.running = True
             self.canvas = pygame.Surface((self.WIDTH, self.HEIGHT))
+            self.environment = Environment(self.canvas, rows, cols)
 
         self.map = np.zeros((rows, cols))
 
 
         # Agents
-        
-        # if not drl_agent_pos:
-        #     drl_agent_pos = (random.randint(0, cols - 1), random.randint(0, rows - 1))
-        # self.map[drl_agent_pos[1]][drl_agent_pos[0]] = 5
-        # self.drl_agent = DQNAgentSprite(self.canvas, 30, 40, drl_agent_pos[0], drl_agent_pos[1])
 
         self.playable_agent = PlayableAgent(30, 40)
         self.map = self.playable_agent.set_pos_in_map(self.map)
         self.preprogrammed_agent = PreprogrammedAgent(30, 40)
         self.map = self.preprogrammed_agent.set_pos_in_map(self.map)
-
+        self.drl_agent = DQNAgent(rows * cols, 4)
+        self.drl_agent_sprite = DQNAgentSprite(30, 40)
+        self.map = self.drl_agent_sprite.set_pos_in_map(self.map)
 
 
         # Food
@@ -66,19 +63,16 @@ class FoodGame:
         for food in self.foods:
             self.map = food.set_pos_in_map(self.map)
 
-        # Environment
-        self.environment = Environment(self.canvas, rows, cols)
-    
-
 
     def run(self):
         while self.running:
-            if self.render_mode == "human":
-                self.clock.tick(5)
-                events = pygame.event.get()
-                self.update(events)
-                self.events(events)
-                self.draw()
+            self.clock.tick(5)
+            events = pygame.event.get()
+            action = self.drl_agent.act(self.map)
+            self.update(events, action)
+            self.events(events)
+            self.draw()
+
 
     def events(self, events):
         for event in events:
@@ -87,20 +81,25 @@ class FoodGame:
                 pygame.quit()
                 sys.exit()
 
-    def update(self, events):
+    def update(self, events, action):
         prev_pos = self.playable_agent.pos
         self.playable_agent.update(events)
         if prev_pos != self.playable_agent.pos:
             self.map[prev_pos[1]][prev_pos[0]] = 0
             self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = 3
         
-
-
         prev_pos = self.preprogrammed_agent.pos
         self.preprogrammed_agent.update(self.foods)
         if prev_pos != self.preprogrammed_agent.pos:
             self.map[prev_pos[1]][prev_pos[0]] = 0
             self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] = 4
+        
+        prev_pos = self.drl_agent_sprite.pos
+        self.drl_agent_sprite.update(action)
+        if prev_pos != self.drl_agent_sprite.pos:
+            self.map[prev_pos[1]][prev_pos[0]] = 0
+            self.map[self.drl_agent_sprite.pos[1]][self.drl_agent_sprite.pos[0]] = 5
+
 
         self.check_collisions()
 
@@ -112,30 +111,51 @@ class FoodGame:
 
     def check_collisions(self):
         for food in self.foods:
-            if self.playable_agent.pos == (food.x, food.y) or self.preprogrammed_agent.pos == (food.x, food.y):
+            if self.playable_agent.pos == (food.x, food.y):
+                self.playable_agent.food_collected += 1
                 self.foods.remove(food)
                 self.foods = Food.generate_foods(30, 40, 1, self.foods)
                 for food in self.foods:
                     self.map[food.y][food.x] = 2
                 break
+            elif self.preprogrammed_agent.pos == (food.x, food.y):
+                self.preprogrammed_agent.food_collected += 1
+                self.foods.remove(food)
+                self.foods = Food.generate_foods(30, 40, 1, self.foods)
+                for food in self.foods:
+                    self.map[food.y][food.x] = 2
+                break
+            elif self.drl_agent_sprite.pos == (food.x, food.y):
+                self.drl_agent_sprite.food_collected += 1
+                self.foods.remove(food)
+                self.foods = Food.generate_foods(30, 40, 1, self.foods)
+                for food in self.foods:
+                    self.map[food.y][food.x] = 2
+                break
+    
+    def train(self, action):
+        if self.render_mode == "human":
+            self.clock.tick(5)
+            events = pygame.event.get()
+            self.update(events, action)
+            self.events(events)
+            self.draw()
+            return self.map
+        elif self.render_mode == "rgb_array":
+            self.update(None, action)
+            return self.map
 
 
 class GridFoodGame(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array'], "render_fps": 5}
 
-    def __init__(self, render_mode, rows, cols, n_food):
+    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int):
         self.rows = rows
         self.cols = cols
         self.n_food = n_food
 
 
-        self.observation_space = spaces.Dict(
-            {
-                "agent": spaces.Box(low=0, high=max(self.cols-1, self.rows-1), shape=(2,), dtype=int),  # for POMDP, this should be removed
-                "foods": spaces.Box(low=0, high=max(self.cols-1, self.rows-1), shape=(self.n_food, 2), dtype=int),  # Should be relative to agent im POMDP
-                # "opponent": spaces.Box(low=0, high=max(self.width, self.height), shape=(2,), dtype=int)  # for POMDP, this should be removed
-            }
-        )
+        self.observation_space = spaces.Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
 
         self.action_space = spaces.Discrete(4)
 
@@ -147,58 +167,83 @@ class GridFoodGame(gym.Env):
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
         self.window = None
         self.clock = None
 
-    
+        self._food_collected = 0
+        self.prev__food_collected = 0
+
     def _get_obs(self):
-        return {"agent": self._agent_location, "foods": self._food_locations}
+        return self.game.map
     
     def _get_info(self):
         return {
-            "nearest_food_distance": np.linalg.norm(self._agent_location - self._food_locations, axis=1).min()
+            "agent_location": self.game.drl_agent_sprite.pos,
         }
 
     def reset(self, seed=None):
         super().reset(seed=seed)
+        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode)
+
         self._food_collected = 0
-
-        self._agent_location = np.array([random.randint(0, self.cols - 1), random.randint(0, self.rows - 1)])
-
-        self._food_locations = np.array([[random.randint(0, self.cols - 1), random.randint(0, self.rows - 1)] for _ in range(self.n_food)])
-
-        while np.any(self._food_locations == self._agent_location):
-            self._agent_location = np.array([random.randint(0, self.cols - 1), random.randint(0, self.rows - 1)])
         
+        self.render(None)
+
         observation = self._get_obs()
         info = self._get_info()
 
-        if self.render_mode == "human":
-            self._render_frame()
-        
         return observation, info
     
     def step(self, action):
-        direction = self._action_to_direction[action]
+        
 
-        self._agent_location = np.clip(self._agent_location + direction, 0, np.array([self.cols - 1, self.rows - 1]))
-
+        self.render(action)
+        self._food_collected = self.game.drl_agent_sprite.food_collected
         terminated = True if self._food_collected == self.n_food else False
 
-        reward = 1 if terminated else 0
+        reward = 0
+        if self._food_collected > self.prev__food_collected:
+            reward = 1
+
         observation = self._get_obs()
         info = self._get_info()
-
-        if self.render_mode == "human":
-            self._render_frame()
         
+        self.prev__food_collected = self._food_collected
         return observation, reward, terminated, False, info
 
-    def render(self):
-        if self.render_mode == "rgb_array":
-            return self._render_frame()
+    def render(self, action):
+        return self.game.train(action)
+
     
-    def _render_frame(self):
-        if self.window is None and self.render_mode == "human":
-            FoodGame(self.rows, self.cols, self.n_food, self.render_mode).run()
+
+
+
+    
+
+def train_drl_agent():
+    env = GridFoodGame("human", 30, 40, 10)
+    state_size = env.rows * env.cols
+    action_size = env.action_space.n
+    agent = DQNAgent(state_size, action_size)
+
+    episodes = 1
+    batch_size = 8
+
+    for e in range(episodes):
+        state, info = env.reset()
+        state = np.reshape(state, [1, agent.state_size])
+
+        done = False
+        while not done:
+            action = agent.act(state)
+            next_state, reward, done, *_ = env.step(action)
+            next_state = np.reshape(next_state, [1, agent.state_size])
+            agent.remember(state, action, reward, next_state, done)
+            state = next_state
+
+            agent.replay(batch_size)
+
+if __name__ == "__main__":
+    train_drl_agent()

@@ -1,4 +1,4 @@
-from game_playing_ai.games.food_game.food_game import FoodGame
+from game_playing_ai.games.food_game.food_game import FoodGame, train_drl_agent
 
 import pygame
 
@@ -100,7 +100,7 @@ class Button(pygame.sprite.Sprite):
 
 if __name__ == "__main__":
 
+    train_drl_agent()
 
-
-    game = GameStarter()
-    game.run()
+    # game = GameStarter()
+    # game.run()

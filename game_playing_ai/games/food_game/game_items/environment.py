@@ -51,21 +51,23 @@ class Environment:
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.empty, self.rect)
                 elif map[i][j] == 1:
+                    pass
+                elif map[i][j] == 2:
                     self.rect = self.food_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.food, self.rect)
-                elif map[i][j] == 2:
+                elif map[i][j] == 3:
                     self.rect = self.playable_agent_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.playable_agent, self.rect)
-                elif map[i][j] == 3:
+                elif map[i][j] == 4:
                     self.rect = self.preprogrammed_agent_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.preprogrammed_agent, self.rect)
-                elif map[i][j] == 4:
+                elif map[i][j] == 5:
                     self.rect = self.drl_agent_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
