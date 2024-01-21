@@ -11,6 +11,8 @@ from gymnasium import spaces
 
 import sys
 import random
+import datetime
+import os
 
 # Map specification
 # 0: Empty
@@ -175,6 +177,12 @@ class GridFoodGame(gym.Env):
         self._food_collected = 0
         self.prev__food_collected = 0
 
+        self.playable_agent_food_collected = 0
+        self.prev_playable_agent_food_collected = 0
+
+        self.preprogrammed_agent_food_collected = 0
+        self.prev_preprogrammed_agent_food_collected = 0
+
     def _get_obs(self):
         return self.game.map
     
@@ -206,11 +214,20 @@ class GridFoodGame(gym.Env):
         reward = 0
         if self._food_collected > self.prev__food_collected:
             reward = 1
+        
+        if self.playable_agent_food_collected > self.prev_playable_agent_food_collected:
+            reward = -1
+        
+        if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
+            reward = -1
+
 
         observation = self._get_obs()
         info = self._get_info()
         
         self.prev__food_collected = self._food_collected
+        self.prev_playable_agent_food_collected = self.playable_agent_food_collected
+        self.prev_preprogrammed_agent_food_collected = self.preprogrammed_agent_food_collected
         return observation, reward, terminated, False, info
 
     def render(self, action):
@@ -228,7 +245,12 @@ def train_drl_agent():
     action_size = env.action_space.n
     agent = DQNAgent(state_size, action_size)
 
-    episodes = 1
+    sorted_models = sorted(os.listdir("data/models"), reverse=True)
+    if len(sorted_models) > 0:
+        agent.load(f"data/models/{sorted_models[0]}")
+
+
+    episodes = 10
     batch_size = 8
 
     for e in range(episodes):
@@ -244,6 +266,8 @@ def train_drl_agent():
             state = next_state
 
             agent.replay(batch_size)
+        
+        agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}.pt")
 
 if __name__ == "__main__":
     train_drl_agent()

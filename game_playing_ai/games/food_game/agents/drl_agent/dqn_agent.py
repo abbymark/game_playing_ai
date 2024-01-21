@@ -77,6 +77,12 @@ class DQNAgent:
         # Update epsilon
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+    
+    def load(self, name):
+        self.model.load_state_dict(torch.load(name))
+    
+    def save(self, name):
+        torch.save(self.model.state_dict(), name)
 
 
 class DQNAgentSprite():
@@ -92,11 +98,11 @@ class DQNAgentSprite():
             self.y = pos[1]
 
     def update(self, action):
-        if not action:
+        if action is None:
             return
         new_x = self.x
         new_y = self.y
-        
+
         if action == 0:
             new_x -= 1
         elif action == 1:
