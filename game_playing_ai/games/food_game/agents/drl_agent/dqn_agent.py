@@ -61,17 +61,15 @@ class DQNAgent:
         # Compute the target Q values
         targets = rewards + (self.gamma * max_next_Q_values * (1 - dones))
 
-        # Only update the Q value for the action taken
-        Q_targets = Q_values.clone()
-        Q_targets[range(batch_size), actions.squeeze()] = targets
+        action_Q_values = Q_values.gather(1, actions).squeeze()
 
         # Loss calculation
-        loss = self.criterion(Q_values, Q_targets)
+        loss = self.criterion(action_Q_values, targets)
 
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
-        print(loss)
+        print(loss, self.epsilon)
         self.optimizer.step()
 
         # Update epsilon
