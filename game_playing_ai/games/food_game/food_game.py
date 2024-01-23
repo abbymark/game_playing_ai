@@ -268,6 +268,3 @@ def train_drl_agent():
             agent.replay(batch_size)
         
         agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}.pt")
-
-if __name__ == "__main__":
-    train_drl_agent()
