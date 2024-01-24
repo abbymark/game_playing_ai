@@ -23,13 +23,6 @@ import os
 # 5: DRL agent
 
 
-# TODO:
-# Gym에서 agent pos, food pos를 받아서 게임을 시작하도록 수정
-# self.map 을 통해서 업데이트 와 observation 을 구현
-# observation space에 agent 여러개의 위치 구현
-
-
-
 class FoodGame:
     WIDTH = 800
     HEIGHT = 600
@@ -86,21 +79,27 @@ class FoodGame:
     def update(self, events, action):
         prev_pos = self.playable_agent.pos
         self.playable_agent.update(events)
-        if prev_pos != self.playable_agent.pos:
+        if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [0, 2]:
             self.map[prev_pos[1]][prev_pos[0]] = 0
             self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = 3
+        else:
+            self.playable_agent.pos = prev_pos
         
         prev_pos = self.preprogrammed_agent.pos
         self.preprogrammed_agent.update(self.foods)
-        if prev_pos != self.preprogrammed_agent.pos:
+        if prev_pos != self.preprogrammed_agent.pos and self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] in [0, 2]:
             self.map[prev_pos[1]][prev_pos[0]] = 0
             self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] = 4
+        else:
+            self.preprogrammed_agent.pos = prev_pos
         
         prev_pos = self.drl_agent_sprite.pos
         self.drl_agent_sprite.update(action)
-        if prev_pos != self.drl_agent_sprite.pos:
+        if prev_pos != self.drl_agent_sprite.pos and self.map[self.drl_agent_sprite.pos[1]][self.drl_agent_sprite.pos[0]] in [0, 2]:
             self.map[prev_pos[1]][prev_pos[0]] = 0
             self.map[self.drl_agent_sprite.pos[1]][self.drl_agent_sprite.pos[0]] = 5
+        else:
+            self.drl_agent_sprite.pos = prev_pos
 
 
         self.check_collisions()
