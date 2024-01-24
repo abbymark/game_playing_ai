@@ -112,26 +112,23 @@ class FoodGame:
 
     def check_collisions(self):
         for food in self.foods:
-            if self.playable_agent.pos == (food.x, food.y):
+            if self.playable_agent.pos == food.pos:
                 self.playable_agent.food_collected += 1
                 self.foods.remove(food)
                 self.foods = Food.generate_foods(30, 40, 1, self.foods)
-                for food in self.foods:
-                    self.map[food.y][food.x] = 2
+                self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
-            elif self.preprogrammed_agent.pos == (food.x, food.y):
+            elif self.preprogrammed_agent.pos == food.pos:
                 self.preprogrammed_agent.food_collected += 1
                 self.foods.remove(food)
                 self.foods = Food.generate_foods(30, 40, 1, self.foods)
-                for food in self.foods:
-                    self.map[food.y][food.x] = 2
+                self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
-            elif self.drl_agent_sprite.pos == (food.x, food.y):
+            elif self.drl_agent_sprite.pos == food.pos:
                 self.drl_agent_sprite.food_collected += 1
                 self.foods.remove(food)
                 self.foods = Food.generate_foods(30, 40, 1, self.foods)
-                for food in self.foods:
-                    self.map[food.y][food.x] = 2
+                self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
     
     def train(self, action):
