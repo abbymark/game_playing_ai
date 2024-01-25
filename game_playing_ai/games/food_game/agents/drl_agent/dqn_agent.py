@@ -14,8 +14,8 @@ class DQNAgent:
         self.gamma = 0.95  # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
-        self.learning_rate = 0.001
+        self.epsilon_decay = 0.9999
+        self.learning_rate = 0.0001
         self.model = self.build_model()
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
@@ -72,10 +72,11 @@ class DQNAgent:
         print(loss, self.epsilon)
         self.optimizer.step()
 
-        # Update epsilon
+        
+    def update_epsilon(self):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-    
+
     def load(self, name):
         self.model.load_state_dict(torch.load(name))
     

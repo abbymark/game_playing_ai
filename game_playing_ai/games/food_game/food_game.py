@@ -248,6 +248,7 @@ def train_drl_agent():
 
     episodes = 10
     batch_size = 8
+    step_count = 0
 
     for e in range(episodes):
         state, info = env.reset()
@@ -262,5 +263,8 @@ def train_drl_agent():
             state = next_state
 
             agent.replay(batch_size)
-        
-        agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}.pt")
+            agent.update_epsilon()
+            step_count += 1
+
+            if step_count % 10000 == 0:
+                agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}.pt")
