@@ -10,7 +10,9 @@ class Food():
         self.cols = cols
 
     @classmethod
-    def generate_foods(cls, rows, cols, n_food, existing_foods=[]):
+    def generate_foods(cls, rows, cols, n_food, existing_foods=None):
+        if existing_foods is None:
+            existing_foods = []
         foods = existing_foods
         for i in range(n_food):
             x = random.randint(0, cols - 1)
