@@ -14,6 +14,8 @@ class PlayableAgent:
             self.y = pos[1]
 
     def update(self, events):
+        if events is None:
+            return
         for event in events:
             if event.type == pygame.KEYDOWN:
                 new_x = self.x
