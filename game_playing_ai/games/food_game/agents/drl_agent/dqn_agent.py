@@ -7,11 +7,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from collections import deque
+import wandb
 
 class DQNAgent:
-    def __init__(self, state_size:int, action_size:int, memory_size:int , 
-                 gamma:float, epsilon_min:float, epsilon_decay:float, 
-                 learning_rate:float, target_update_freq:str, nn_type:str):
+    def __init__(self, state_size:int, action_size:int, memory_size:int=10000, 
+                 gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.9999, 
+                 learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = deque(maxlen=memory_size)
@@ -25,8 +26,12 @@ class DQNAgent:
         self.target_model = self.get_model(nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
-
+        self.is_training = is_training
         self.update_step = 0
+
+        if is_training:
+            wandb.login()
+            wandb.init(project="food_game")
 
     def get_model(self, nn_type:str):
         if nn_type == 'DNN':
@@ -36,7 +41,7 @@ class DQNAgent:
         self.memory.append((state, action, reward, next_state, done))
 
     def act(self, state):
-        if np.random.rand() <= self.epsilon:
+        if np.random.rand() <= self.epsilon and self.is_training:
             return random.randrange(self.action_size)
         state = torch.FloatTensor(state)
         act_values = self.model(state)
@@ -73,12 +78,17 @@ class DQNAgent:
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
-        print(loss, self.epsilon)
         self.optimizer.step()
+
+        wandb.log({"loss": loss.item()})
+        wandb.log({"epsilon": self.epsilon})
+        
 
         # update target network
         if self.update_step % self.target_update_freq == 0:
             self.target_model.load_state_dict(self.model.state_dict())
+
+            print(f"Target network updated and the loss is {loss.item()}")
         
     def update_epsilon(self):
         if self.epsilon > self.epsilon_min:
