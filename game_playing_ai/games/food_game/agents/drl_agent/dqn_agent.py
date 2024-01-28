@@ -1,3 +1,5 @@
+from game_playing_ai.games.food_game.agents.drl_agent.networks.dnn import DNN
+
 import pygame
 import numpy as np
 import random
@@ -7,28 +9,28 @@ import torch.optim as optim
 from collections import deque
 
 class DQNAgent:
-    def __init__(self, state_size, action_size):
+    def __init__(self, state_size:int, action_size:int, memory_size:int , 
+                 gamma:float, epsilon_min:float, epsilon_decay:float, 
+                 learning_rate:float, target_update_freq:str, nn_type:str):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)
-        self.gamma = 0.95  # discount rate
+        self.memory = deque(maxlen=memory_size)
+        self.gamma = gamma  # discount rate
         self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.9999
-        self.learning_rate = 0.0001
-        self.model = self.build_model()
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.learning_rate = learning_rate
+        self.target_update_freq = target_update_freq
+        self.model = self.get_model(nn_type)
+        self.target_model = self.get_model(nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
 
-    def build_model(self):
-        model = nn.Sequential(
-            nn.Linear(self.state_size, 24),
-            nn.ReLU(),
-            nn.Linear(24, 24),
-            nn.ReLU(),
-            nn.Linear(24, self.action_size)
-        )
-        return model
+        self.update_step = 0
+
+    def get_model(self, nn_type:str):
+        if nn_type == 'DNN':
+            return DNN(self.state_size, self.action_size)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -41,6 +43,8 @@ class DQNAgent:
         return np.argmax(act_values.cpu().data.numpy())
 
     def replay(self, batch_size):
+        self.update_step += 1
+
         if len(self.memory) < batch_size:
             return
     
@@ -55,7 +59,7 @@ class DQNAgent:
         Q_values = self.model(states)
 
         # Predict next Q-values for next states
-        next_Q_values = self.model(next_states).detach()
+        next_Q_values = self.target_model(next_states)
         max_next_Q_values = next_Q_values.max(1)[0]
 
         # Compute the target Q values
@@ -72,6 +76,9 @@ class DQNAgent:
         print(loss, self.epsilon)
         self.optimizer.step()
 
+        # update target network
+        if self.update_step % self.target_update_freq == 0:
+            self.target_model.load_state_dict(self.model.state_dict())
         
     def update_epsilon(self):
         if self.epsilon > self.epsilon_min:

@@ -196,6 +196,18 @@ class GameStarter:
                                                                     starting_option="human")
         self.config["render"] = "human"
 
+        # nn update frequency
+        self.nn_update_frequency_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,500), (150, 30)),
+                                                                        container=self.train_config_panel,
+                                                                        text='Target Update Freq', manager=self.manager)
+        self.nn_update_frequency_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 500), (100, 30)),
+                                                                        container=self.train_config_panel,
+                                                                        initial_text="100",
+                                                                        manager=self.manager)
+        self.config["target_update_freq"] = 100
+
+
+
         # Type of Neural Network
         self.nn_type_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,50), (150, 30)), 
                                                             container=self.train_config_panel,
@@ -270,11 +282,11 @@ class GameStarter:
 
 
         # Train button
-        self.train_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100, 500), (150, 50)), 
+        self.train_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100, 550), (150, 50)), 
                                                              container=self.train_config_panel, anchors={"centerx": "centerx"},
                                                              text='Train', manager=self.manager)
         # Back button
-        self.back_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((100, 500), (150, 50)),
+        self.back_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((100, 550), (150, 50)),
                                                         container=self.train_config_panel, anchors={"centerx": "centerx"},
                                                         text='Back', manager=self.manager)
         

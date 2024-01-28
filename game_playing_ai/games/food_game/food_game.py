@@ -59,7 +59,8 @@ class FoodGame:
         self.map = self.playable_agent.set_pos_in_map(self.map)
         self.preprogrammed_agent = PreprogrammedAgent(30, 40)
         self.map = self.preprogrammed_agent.set_pos_in_map(self.map)
-        self.drl_agent = DQNAgent(rows * cols, 4)
+        if not is_training:
+            self.drl_agent = DQNAgent(rows * cols, 4)
         self.drl_agent_sprite = DQNAgentSprite(30, 40)
         self.map = self.drl_agent_sprite.set_pos_in_map(self.map)
 
@@ -298,21 +299,20 @@ class GridFoodGame(gym.Env):
     
 
 def train_drl_agent(config:Dict[str, str]):
-    env = GridFoodGame("human", 30, 40, 10)
+    env = GridFoodGame(config["render"], 30, 40, 10)
     state_size = env.rows * env.cols
     action_size = env.action_space.n
-    agent = DQNAgent(state_size, action_size)
+    agent = DQNAgent(state_size, action_size, config['memory_size'], config['gamma'], config['epsilon_min'], config['epsilon_decay'], 
+                     config['learning_rate'],  config['target_update_freq'], config['nn_type'])
 
-    sorted_models = sorted(os.listdir("data/models"), reverse=True)
-    if len(sorted_models) > 0:
-        agent.load(f"data/models/{sorted_models[0]}")
+    # sorted_models = sorted(os.listdir("data/models"), reverse=True)
+    # if len(sorted_models) > 0:
+    #     agent.load(f"data/models/{sorted_models[0]}")
 
 
-    episodes = 1000
-    batch_size = 8
     step_count = 0
 
-    for e in range(episodes):
+    for e in range(config["episodes"]):
         state, info = env.reset()
         state = np.reshape(state, [1, agent.state_size])
 
@@ -324,7 +324,7 @@ def train_drl_agent(config:Dict[str, str]):
             agent.remember(state, action, reward, next_state, done)
             state = next_state
 
-            agent.replay(batch_size)
+            agent.replay(config["batch_size"])
             agent.update_epsilon()
             step_count += 1
 
