@@ -5,6 +5,7 @@ from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgentS
 from game_playing_ai.games.food_game.game_items.food import Food
 
 import pygame
+import pygame_gui
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -13,6 +14,7 @@ import sys
 import random
 import datetime
 import os
+from typing import Dict
 
 # Map specification
 # 0: Empty
@@ -24,26 +26,35 @@ import os
 
 
 class FoodGame:
-    WIDTH = 800
+    WIDTH = 1200
     HEIGHT = 600
 
-    def __init__(self, rows=30, cols=40, n_food=10, render_mode="human"):
+    GAME_WIDTH = 800
+    GAME_HEIGHT = 600
+
+    def __init__(self, rows=30, cols=50, n_food=10, render_mode="human", is_training=False):
         self.render_mode = render_mode
 
         if self.render_mode == "human":
             pygame.init()
             self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
-            pygame.display.set_caption("Game Playing AI")
+            
+            if is_training:
+                self._setup_train_side_panel()
+            else:
+                self._setup_run_side_panel()
+            
+
+            self.run_speed = 5
             self.clock = pygame.time.Clock()
             self.running = True
-            self.canvas = pygame.Surface((self.WIDTH, self.HEIGHT))
+            self.canvas = pygame.Surface((self.GAME_WIDTH, self.GAME_HEIGHT))
             self.environment = Environment(self.canvas, rows, cols)
 
         self.map = np.zeros((rows, cols))
 
 
         # Agents
-
         self.playable_agent = PlayableAgent(30, 40)
         self.map = self.playable_agent.set_pos_in_map(self.map)
         self.preprogrammed_agent = PreprogrammedAgent(30, 40)
@@ -58,25 +69,74 @@ class FoodGame:
         for food in self.foods:
             self.map = food.set_pos_in_map(self.map)
 
+    def _setup_train_side_panel(self):
+        self.manager = pygame_gui.UIManager((self.WIDTH, self.HEIGHT), "theme.json")
+        self.container = pygame_gui.elements.UIPanel(relative_rect=pygame.Rect((self.GAME_WIDTH, 0), (self.WIDTH - self.GAME_WIDTH, self.HEIGHT)), 
+                                                        manager=self.manager, 
+                                                        object_id="#side_panel")
+        self.side_panel_title_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 0), (300, 100)), 
+                                                                    container=self.container, 
+                                                                    anchors={"centerx": "centerx"},
+                                                                    text='Side Panel', manager=self.manager, object_id="#main_title")
+
+        self.run_speed_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 70), (300, 50)), 
+                                                            container=self.container, 
+                                                            anchors={"centerx": "centerx"},
+                                                            manager=self.manager, object_id="#side_panel_label", text="Run Speed")
+
+        self.run_speed_slider = pygame_gui.elements.UIHorizontalSlider(relative_rect=pygame.Rect((0, 120), (300, 50)), 
+                                                                        container=self.container, 
+                                                                        anchors={"centerx": "centerx"},
+                                                                        manager=self.manager, object_id="#run_speed_slider", 
+                                                                        start_value=5, value_range=(5, 100))
+    
+    def _setup_run_side_panel(self):
+        self.manager = pygame_gui.UIManager((self.WIDTH, self.HEIGHT), "theme.json")
+        self.container = pygame_gui.elements.UIPanel(relative_rect=pygame.Rect((self.GAME_WIDTH, 0), (self.WIDTH - self.GAME_WIDTH, self.HEIGHT)), 
+                                                        manager=self.manager, 
+                                                        object_id="#side_panel")
+        self.side_panel_title_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 0), (300, 100)), 
+                                                                    container=self.container, 
+                                                                    anchors={"centerx": "centerx"},
+                                                                    text='Side Panel', manager=self.manager, object_id="#main_title")
+
+        self.run_speed_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 70), (300, 50)), 
+                                                            container=self.container, 
+                                                            anchors={"centerx": "centerx"},
+                                                            manager=self.manager, object_id="#side_panel_label", text="Run Speed")
+
+        self.run_speed_slider = pygame_gui.elements.UIHorizontalSlider(relative_rect=pygame.Rect((0, 120), (300, 50)), 
+                                                                        container=self.container, 
+                                                                        anchors={"centerx": "centerx"},
+                                                                        manager=self.manager, object_id="#run_speed_slider", 
+                                                                        start_value=5, value_range=(5, 100))
 
     def run(self):
         while self.running:
-            self.clock.tick(5)
+            self.time_delta = self.clock.tick(self.run_speed)/1000.0
             events = pygame.event.get()
             action = self.drl_agent.act(self.map)
-            self.update(events, action)
-            self.events(events)
-            self.draw()
+            self._update(events, action)
+            self._events(events)
+            self._draw()
 
 
-    def events(self, events):
+    def _events(self, events):
         for event in events:
             if event.type == pygame.QUIT:
                 self.running = False
                 pygame.quit()
                 sys.exit()
+            elif event.type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
+                if event.ui_element == self.run_speed_slider:
+                    self.run_speed = int(event.value)
+            elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
+                pass
 
-    def update(self, events, action):
+        
+            self.manager.process_events(event)
+
+    def _update(self, events, action):
         prev_pos = self.playable_agent.pos
         self.playable_agent.update(events)
         if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [0, 2]:
@@ -102,15 +162,17 @@ class FoodGame:
             self.drl_agent_sprite.pos = prev_pos
 
 
-        self.check_collisions()
+        self._check_collisions()
+        self.manager.update(self.time_delta)
 
-    def draw(self):
+    def _draw(self):
         self.screen.fill((0, 0, 0))
         self.environment.draw(self.map)
         self.screen.blit(self.canvas, self.canvas.get_rect())
+        self.manager.draw_ui(self.screen)
         pygame.display.update()
 
-    def check_collisions(self):
+    def _check_collisions(self):
         for food in self.foods:
             if self.playable_agent.pos == food.pos:
                 self.playable_agent.food_collected += 1
@@ -133,14 +195,14 @@ class FoodGame:
     
     def train(self, action):
         if self.render_mode == "human":
-            self.clock.tick(5)
+            self.time_delta = self.clock.tick(self.run_speed)/1000.0
             events = pygame.event.get()
-            self.update(events, action)
-            self.events(events)
-            self.draw()
+            self._update(events, action)
+            self._events(events)
+            self._draw()
             return self.map
         elif self.render_mode == "rgb_array":
-            self.update(None, action)
+            self._update(None, action)
             return self.map
 
 
@@ -189,7 +251,7 @@ class GridFoodGame(gym.Env):
 
     def reset(self, seed=None):
         super().reset(seed=seed)
-        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode)
+        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True)
 
         self._food_collected = 0
         
@@ -235,7 +297,7 @@ class GridFoodGame(gym.Env):
 
     
 
-def train_drl_agent():
+def train_drl_agent(config:Dict[str, str]):
     env = GridFoodGame("human", 30, 40, 10)
     state_size = env.rows * env.cols
     action_size = env.action_space.n
@@ -246,7 +308,7 @@ def train_drl_agent():
         agent.load(f"data/models/{sorted_models[0]}")
 
 
-    episodes = 10
+    episodes = 1000
     batch_size = 8
     step_count = 0
 
