@@ -68,7 +68,7 @@ class GameStarter:
                     self.config["render"] = event.text
                 elif event.ui_element == self.nn_type_drop_down_menu:
                     self.config["nn_type"] = event.text
-            elif event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
+            elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
                 if event.ui_element == self.memory_size_text_entry:
                     self.config["memory_size"] = int(event.text)
                 elif event.ui_element == self.gamma_text_entry:
@@ -151,7 +151,7 @@ class GameStarter:
                                                             text='Epsilon Decay', manager=self.manager)
         self.epsilon_decay_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 250), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="0.9999",
+                                                                    initial_text="0.999999",
                                                                     manager=self.manager)
         self.config["epsilon_decay"] = 0.9999
 
@@ -279,6 +279,17 @@ class GameStarter:
         self.config["agent_view_row_size"] = 5
         self.agent_input_row_size_label.disable()
         self.agent_input_row_size_text_entry.disable()
+
+        # Solo training
+        self.solo_training_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,350), (150, 30)), 
+                                                            container=self.train_config_panel,
+                                                            text='Solo Training', manager=self.manager)
+        self.solo_training_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((600, 350), (100, 30)),
+                                                                    container=self.train_config_panel,
+                                                                    manager=self.manager,
+                                                                    options_list=["True", "False"],
+                                                                    starting_option="True")
+        self.config["solo_training"] = True
 
 
         # Train button
