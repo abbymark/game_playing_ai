@@ -9,25 +9,31 @@ import torch.optim as optim
 from collections import deque
 import wandb
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class DQNAgent:
     def __init__(self, state_size:int, action_size:int, memory_size:int=10000, 
-                 gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.9999, 
+                 gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.999999, 
                  learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=memory_size)
+        self.memory_size = memory_size
+        self.memory = deque(maxlen=self.memory_size)
         self.gamma = gamma  # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
         self.target_update_freq = target_update_freq
-        self.model = self.get_model(nn_type)
-        self.target_model = self.get_model(nn_type)
+        self.model = self.get_model(nn_type).to(device)
+        self.target_model = self.get_model(nn_type).to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
         self.is_training = is_training
         self.update_step = 0
+
+        self.logging_steps = 100
+        self.loss_sum = 0
 
         if is_training:
             wandb.login()
@@ -43,22 +49,24 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon and self.is_training:
             return random.randrange(self.action_size)
-        state = torch.FloatTensor(state)
+        state = torch.FloatTensor(state).to(device)
         act_values = self.model(state)
         return np.argmax(act_values.cpu().data.numpy())
 
     def replay(self, batch_size):
         self.update_step += 1
 
-        if len(self.memory) < batch_size:
+        # if len(self.memory) < batch_size:
+        if len(self.memory) < self.memory_size:
             return
+        
     
         minibatch = random.sample(self.memory, batch_size)
-        states = torch.FloatTensor([x[0] for x in minibatch]).reshape(-1, self.state_size)
-        actions = torch.LongTensor([x[1] for x in minibatch]).view(-1, 1)
-        rewards = torch.FloatTensor([x[2] for x in minibatch])
-        next_states = torch.FloatTensor([x[3] for x in minibatch]).reshape(-1, self.state_size)
-        dones = torch.FloatTensor([float(x[4]) for x in minibatch])
+        states = torch.FloatTensor([x[0] for x in minibatch]).reshape(-1, self.state_size).to(device)
+        actions = torch.LongTensor([x[1] for x in minibatch]).view(-1, 1).to(device)
+        rewards = torch.FloatTensor([x[2] for x in minibatch]).to(device)
+        next_states = torch.FloatTensor([x[3] for x in minibatch]).reshape(-1, self.state_size).to(device)
+        dones = torch.FloatTensor([float(x[4]) for x in minibatch]).to(device)
 
         # Predict Q-values for starting states
         Q_values = self.model(states)
@@ -80,15 +88,19 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
-        wandb.log({"loss": loss.item()})
-        wandb.log({"epsilon": self.epsilon})
+        self.update_epsilon()
+
+        self.loss_sum += loss.item()
+        if self.update_step % self.logging_steps == 0:
+            wandb.log({"loss": self.loss_sum / self.logging_steps})
+            wandb.log({"epsilon": self.epsilon})
+            self.loss_sum = 0
         
 
         # update target network
         if self.update_step % self.target_update_freq == 0:
             self.target_model.load_state_dict(self.model.state_dict())
 
-            print(f"Target network updated and the loss is {loss.item()}")
         
     def update_epsilon(self):
         if self.epsilon > self.epsilon_min:

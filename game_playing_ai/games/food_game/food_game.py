@@ -32,8 +32,9 @@ class FoodGame:
     GAME_WIDTH = 800
     GAME_HEIGHT = 600
 
-    def __init__(self, rows=30, cols=50, n_food=10, render_mode="human", is_training=False):
+    def __init__(self, rows=30, cols=40, n_food=10, render_mode="human", is_training=False, solo_training=False):
         self.render_mode = render_mode
+        self.solo_training = solo_training
 
         if self.render_mode == "human":
             pygame.init()
@@ -60,7 +61,11 @@ class FoodGame:
         self.preprogrammed_agent = PreprogrammedAgent(30, 40)
         self.map = self.preprogrammed_agent.set_pos_in_map(self.map)
         if not is_training:
-            self.drl_agent = DQNAgent(rows * cols, 4)
+            self.drl_agent = DQNAgent(rows * cols, 4, is_training=False)
+            sorted_models = sorted(os.listdir("data/models"), reverse=True)
+            if len(sorted_models) > 0:
+                self.drl_agent.load(f"data/models/{sorted_models[0]}")
+                print(f"Loaded model: {sorted_models[0]}")
         self.drl_agent_sprite = DQNAgentSprite(30, 40)
         self.map = self.drl_agent_sprite.set_pos_in_map(self.map)
 
@@ -116,7 +121,8 @@ class FoodGame:
         while self.running:
             self.time_delta = self.clock.tick(self.run_speed)/1000.0
             events = pygame.event.get()
-            action = self.drl_agent.act(self.map)
+            state = np.reshape(self.map, (1, self.map.shape[0] * self.map.shape[1]))
+            action = self.drl_agent.act(state)
             self._update(events, action)
             self._events(events)
             self._draw()
@@ -147,7 +153,8 @@ class FoodGame:
             self.playable_agent.pos = prev_pos
         
         prev_pos = self.preprogrammed_agent.pos
-        self.preprogrammed_agent.update(self.foods)
+        if not self.solo_training:
+            self.preprogrammed_agent.update(self.foods)
         if prev_pos != self.preprogrammed_agent.pos and self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] in [0, 2]:
             self.map[prev_pos[1]][prev_pos[0]] = 0
             self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] = 4
@@ -164,7 +171,8 @@ class FoodGame:
 
 
         self._check_collisions()
-        self.manager.update(self.time_delta)
+        if self.render_mode == "human":
+            self.manager.update(self.time_delta)
 
     def _draw(self):
         self.screen.fill((0, 0, 0))
@@ -210,10 +218,11 @@ class FoodGame:
 class GridFoodGame(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array'], "render_fps": 5}
 
-    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int):
+    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo_training:bool):
         self.rows = rows
         self.cols = cols
         self.n_food = n_food
+        self.solo_training = solo_training
 
 
         self.observation_space = spaces.Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
@@ -252,7 +261,7 @@ class GridFoodGame(gym.Env):
 
     def reset(self, seed=None):
         super().reset(seed=seed)
-        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True)
+        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo_training=self.solo_training)
 
         self._food_collected = 0
         
@@ -275,10 +284,10 @@ class GridFoodGame(gym.Env):
             reward = 1
         
         if self.playable_agent_food_collected > self.prev_playable_agent_food_collected:
-            reward = -1
+            reward = -0.1
         
         if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
-            reward = -1
+            reward = -0.1
 
 
         observation = self._get_obs()
@@ -299,11 +308,11 @@ class GridFoodGame(gym.Env):
     
 
 def train_drl_agent(config:Dict[str, str]):
-    env = GridFoodGame(config["render"], 30, 40, 10)
+    env = GridFoodGame(config["render"], 30, 40, 10, config['solo_training'])
     state_size = env.rows * env.cols
     action_size = env.action_space.n
     agent = DQNAgent(state_size, action_size, config['memory_size'], config['gamma'], config['epsilon_min'], config['epsilon_decay'], 
-                     config['learning_rate'],  config['target_update_freq'], config['nn_type'])
+                     config['learning_rate'],  config['target_update_freq'], config['nn_type'], is_training=True)
 
     # sorted_models = sorted(os.listdir("data/models"), reverse=True)
     # if len(sorted_models) > 0:
@@ -325,7 +334,6 @@ def train_drl_agent(config:Dict[str, str]):
             state = next_state
 
             agent.replay(config["batch_size"])
-            agent.update_epsilon()
             step_count += 1
 
             if step_count % 10000 == 0:
