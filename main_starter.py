@@ -70,29 +70,29 @@ class GameStarter:
                     self.config["nn_type"] = event.text
             elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
                 if event.ui_element == self.memory_size_text_entry:
-                    self.config["memory_size"] = int(event.text)
+                    self.config["memory_size"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.gamma_text_entry:
-                    self.config["gamma"] = float(event.text)
+                    self.config["gamma"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.epsilon_min_text_entry:
-                    self.config["epsilon_min"] = float(event.text)
+                    self.config["epsilon_min"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.epsilon_decay_text_entry:
-                    self.config["epsilon_decay"] = float(event.text)
+                    self.config["epsilon_decay"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.learning_rate_text_entry:
-                    self.config["learning_rate"] = float(event.text)
+                    self.config["learning_rate"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.batch_size_text_entry:
-                    self.config["batch_size"] = int(event.text)
+                    self.config["batch_size"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.episodes_text_entry:
-                    self.config["episodes"] = int(event.text)
+                    self.config["episodes"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.map_size_rows_text_entry:
-                    self.config["map_size_rows"] = int(event.text)
+                    self.config["map_size_rows"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.map_size_cols_text_entry:
-                    self.config["map_size_cols"] = int(event.text)
+                    self.config["map_size_cols"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.food_count_text_entry:
-                    self.config["food_count"] = int(event.text)
+                    self.config["food_count"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.agent_input_col_size_text_entry:
-                    self.config["agent_input_col_size"] = int(event.text)
+                    self.config["agent_input_col_size"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.agent_input_row_size_text_entry:
-                    self.config["agent_input_row_size"] = int(event.text)
+                    self.config["agent_input_row_size"] = int(event.text) if event.text != "" else 0
 
 
             self.manager.process_events(event)
@@ -121,9 +121,9 @@ class GameStarter:
                                                             text='Memory Size', manager=self.manager)
         self.memory_size_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 100), (100, 30)), 
                                                             container=self.train_config_panel,
-                                                            initial_text="10000",
+                                                            initial_text="100000",
                                                             manager=self.manager)
-        self.config["memory_size"] = 10000
+        self.config["memory_size"] = 100000
 
         # Gamma
         self.gamma_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,150), (150, 30)), 
@@ -151,9 +151,9 @@ class GameStarter:
                                                             text='Epsilon Decay', manager=self.manager)
         self.epsilon_decay_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 250), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="0.999999",
+                                                                    initial_text="0.995",
                                                                     manager=self.manager)
-        self.config["epsilon_decay"] = 0.9999
+        self.config["epsilon_decay"] = 0.995
 
         # Learning rate
         self.learning_rate_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,300), (150, 30)), 
@@ -171,9 +171,9 @@ class GameStarter:
                                                             text='Batch Size', manager=self.manager)
         self.batch_size_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 350), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="32",
+                                                                    initial_text="128",
                                                                     manager=self.manager)
-        self.config["batch_size"] = 32
+        self.config["batch_size"] = 128
 
         # Episodes
         self.episodes_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,400), (150, 30)), 
@@ -202,9 +202,9 @@ class GameStarter:
                                                                         text='Target Update Freq', manager=self.manager)
         self.nn_update_frequency_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 500), (100, 30)),
                                                                         container=self.train_config_panel,
-                                                                        initial_text="100",
+                                                                        initial_text="1000",
                                                                         manager=self.manager)
-        self.config["target_update_freq"] = 100
+        self.config["target_update_freq"] = 1000
 
 
 
