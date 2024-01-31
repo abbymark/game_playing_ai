@@ -25,8 +25,8 @@ class DQNAgent:
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
         self.target_update_freq = target_update_freq
-        self.model = self.get_model(nn_type).to(device)
-        self.target_model = self.get_model(nn_type).to(device)
+        self.model = self.get_model(nn_type)
+        self.target_model = self.get_model(nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
         self.is_training = is_training
@@ -41,7 +41,7 @@ class DQNAgent:
 
     def get_model(self, nn_type:str):
         if nn_type == 'DNN':
-            return DNN(self.state_size, self.action_size)
+            return DNN(self.state_size, self.action_size).to(device)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -56,17 +56,23 @@ class DQNAgent:
     def replay(self, batch_size):
         self.update_step += 1
 
-        # if len(self.memory) < batch_size:
-        if len(self.memory) < self.memory_size:
+        if len(self.memory) < self.memory_size or len(self.memory) < batch_size:
             return
-        
     
         minibatch = random.sample(self.memory, batch_size)
-        states = torch.FloatTensor([x[0] for x in minibatch]).reshape(-1, self.state_size).to(device)
-        actions = torch.LongTensor([x[1] for x in minibatch]).view(-1, 1).to(device)
-        rewards = torch.FloatTensor([x[2] for x in minibatch]).to(device)
-        next_states = torch.FloatTensor([x[3] for x in minibatch]).reshape(-1, self.state_size).to(device)
-        dones = torch.FloatTensor([float(x[4]) for x in minibatch]).to(device)
+        # Convert list of numpy arrays to single numpy array for each type of data
+        states = np.array([x[0] for x in minibatch]) / 5  # normalize state
+        actions = np.array([x[1] for x in minibatch])
+        rewards = np.array([x[2] for x in minibatch])
+        next_states = np.array([x[3] for x in minibatch]) / 5  # normalize next state
+        dones = np.array([float(x[4]) for x in minibatch])
+
+        # Convert numpy arrays to PyTorch tensors
+        states = torch.FloatTensor(states).reshape(-1, self.state_size).to(device)
+        actions = torch.LongTensor(actions).view(-1, 1).to(device)
+        rewards = torch.FloatTensor(rewards).to(device)
+        next_states = torch.FloatTensor(next_states).reshape(-1, self.state_size).to(device)
+        dones = torch.FloatTensor(dones).to(device)
 
         # Predict Q-values for starting states
         Q_values = self.model(states)
@@ -88,7 +94,7 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
-        self.update_epsilon()
+        # self.update_epsilon()
 
         self.loss_sum += loss.item()
         if self.update_step % self.logging_steps == 0:

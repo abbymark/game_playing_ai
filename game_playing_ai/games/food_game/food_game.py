@@ -311,6 +311,7 @@ def train_drl_agent(config:Dict[str, str]):
     env = GridFoodGame(config["render"], 30, 40, 10, config['solo_training'])
     state_size = env.rows * env.cols
     action_size = env.action_space.n
+
     agent = DQNAgent(state_size, action_size, config['memory_size'], config['gamma'], config['epsilon_min'], config['epsilon_decay'], 
                      config['learning_rate'],  config['target_update_freq'], config['nn_type'], is_training=True)
 
@@ -338,3 +339,5 @@ def train_drl_agent(config:Dict[str, str]):
 
             if step_count % 10000 == 0:
                 agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}.pt")
+
+        agent.update_epsilon()
