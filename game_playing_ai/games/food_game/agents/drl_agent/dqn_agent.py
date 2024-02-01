@@ -28,7 +28,8 @@ class DQNAgent:
         self.model = self.get_model(nn_type)
         self.target_model = self.get_model(nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        self.criterion = nn.MSELoss()
+        # self.criterion = nn.MSELoss()
+        self.criterion = nn.SmoothL1Loss()
         self.is_training = is_training
         self.update_step = 0
 
@@ -49,7 +50,7 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon and self.is_training:
             return random.randrange(self.action_size)
-        state = torch.FloatTensor(state).to(device)
+        state = torch.FloatTensor(state).to(device) / 5  # normalize state
         act_values = self.model(state)
         return np.argmax(act_values.cpu().data.numpy())
 

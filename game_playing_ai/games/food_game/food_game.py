@@ -282,6 +282,8 @@ class GridFoodGame(gym.Env):
         reward = 0
         if self._food_collected > self.prev__food_collected:
             reward = 1
+        else:
+            reward = -0.01
         
         if self.playable_agent_food_collected > self.prev_playable_agent_food_collected:
             reward = -0.1
