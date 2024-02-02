@@ -1,4 +1,5 @@
 from game_playing_ai.games.food_game.agents.drl_agent.networks.dnn import DNN
+from game_playing_ai.games.food_game.agents.drl_agent.networks.cnn import CNN
 
 import pygame
 import numpy as np
@@ -43,6 +44,8 @@ class DQNAgent:
     def get_model(self, nn_type:str):
         if nn_type == 'DNN':
             return DNN(self.state_size, self.action_size).to(device)
+        elif nn_type == 'CNN':
+            return CNN(self.state_size, self.action_size).to(device)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -69,10 +72,10 @@ class DQNAgent:
         dones = np.array([float(x[4]) for x in minibatch])
 
         # Convert numpy arrays to PyTorch tensors
-        states = torch.FloatTensor(states).reshape(-1, self.state_size).to(device)
+        states = torch.FloatTensor(states).to(device)
         actions = torch.LongTensor(actions).view(-1, 1).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
-        next_states = torch.FloatTensor(next_states).reshape(-1, self.state_size).to(device)
+        next_states = torch.FloatTensor(next_states).to(device)
         dones = torch.FloatTensor(dones).to(device)
 
         # Predict Q-values for starting states

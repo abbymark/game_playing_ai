@@ -12,6 +12,7 @@ class DNN(torch.nn.Module):
         self.relu = torch.nn.ReLU()
     
     def forward(self, x):
+        x = x.view(-1, self.input_dim)
         x = self.fc1(x)
         x = self.relu(x)
         x = self.fc2(x)
