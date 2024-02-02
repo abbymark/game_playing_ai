@@ -326,20 +326,20 @@ def train_drl_agent(config:Dict[str, str]):
 
     for e in range(config["episodes"]):
         state, info = env.reset()
-        state = np.reshape(state, [1, agent.state_size])
+        # state = np.reshape(state, [1, agent.state_size])
 
         done = False
         while not done:
             action = agent.act(state)
             next_state, reward, done, *_ = env.step(action)
-            next_state = np.reshape(next_state, [1, agent.state_size])
+            # next_state = np.reshape(next_state, [1, agent.state_size])
             agent.remember(state, action, reward, next_state, done)
             state = next_state
 
             agent.replay(config["batch_size"])
             step_count += 1
 
-            if step_count % 10000 == 0:
+            if step_count % 10000 == 0 and step_count > config["memory_size"]:
                 agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}.pt")
-
-        agent.update_epsilon()
+        if len(agent.memory) == config['memory_size']:
+            agent.update_epsilon()
