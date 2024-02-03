@@ -10,6 +10,9 @@ import torch.optim as optim
 from collections import deque
 import wandb
 
+import os
+import json
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DQNAgent:
@@ -26,8 +29,9 @@ class DQNAgent:
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
         self.target_update_freq = target_update_freq
-        self.model = self.get_model(nn_type)
-        self.target_model = self.get_model(nn_type)
+        self.nn_type = nn_type
+        self.model = self.get_model(self.nn_type)
+        self.target_model = self.get_model(self.nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         # self.criterion = nn.MSELoss()
         self.criterion = nn.SmoothL1Loss()
@@ -53,7 +57,7 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon and self.is_training:
             return random.randrange(self.action_size)
-        state = torch.FloatTensor(state).to(device) / 5  # normalize state
+        state = torch.FloatTensor(state).unsqueeze(0).to(device) / 5  # normalize state
         act_values = self.model(state)
         return np.argmax(act_values.cpu().data.numpy())
 
@@ -117,10 +121,41 @@ class DQNAgent:
             self.epsilon *= self.epsilon_decay
 
     def load(self, name):
-        self.model.load_state_dict(torch.load(name))
+        self.model.load_state_dict(torch.load(name + "/model.pt"))
+        with open(name + "/config.json", "r") as f:
+            config = json.load(f)
+            self.state_size = config["state_size"]
+            self.action_size = config["action_size"]
+            self.memory_size = config["memory_size"]
+            self.gamma = config["gamma"]
+            self.epsilon_min = config["epsilon_min"]
+            self.epsilon_decay = config["epsilon_decay"]
+            self.learning_rate = config["learning_rate"]
+            self.target_update_freq = config["target_update_freq"]
+            self.nn_type = config["nn_type"]
+            self.model = self.get_model(self.nn_type)
+            self.target_model = self.get_model(self.nn_type)
+            self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+            self.criterion = nn.SmoothL1Loss()
+            self.model.load_state_dict(torch.load(name + "/model.pt"))
+            self.target_model.load_state_dict(torch.load(name + "/model.pt"))
     
     def save(self, name):
-        torch.save(self.model.state_dict(), name)
+        os.makedirs(os.path.dirname(name), exist_ok=True)
+        torch.save(self.model.state_dict(), f"{name}/model.pt")
+        with open(f"{name}/config.json", "w") as f:
+            json.dump({
+                "state_size": self.state_size,
+                "action_size": self.action_size,
+                "memory_size": self.memory_size,
+                "gamma": self.gamma,
+                "epsilon_min": self.epsilon_min,
+                "epsilon_decay": self.epsilon_decay,
+                "learning_rate": self.learning_rate,
+                "target_update_freq": self.target_update_freq,
+                "nn_type": self.nn_type,
+            }, f)
+
 
 
 class DQNAgentSprite():
