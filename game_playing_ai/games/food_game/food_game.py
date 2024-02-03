@@ -281,15 +281,15 @@ class GridFoodGame(gym.Env):
 
         reward = 0
         if self._food_collected > self.prev__food_collected:
-            reward = 1
+            reward += 1
         else:
-            reward = -0.01
+            reward += -0.01
         
         if self.playable_agent_food_collected > self.prev_playable_agent_food_collected:
-            reward = -0.1
+            reward += -0.1
         
         if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
-            reward = -0.1
+            reward += -0.1
 
 
         observation = self._get_obs()
@@ -310,7 +310,7 @@ class GridFoodGame(gym.Env):
     
 
 def train_drl_agent(config:Dict[str, str]):
-    env = GridFoodGame(config["render"], 30, 40, 10, config['solo_training'])
+    env = GridFoodGame(config["render"], 30, 40, config['food_count'], config['solo_training'])
     state_size = env.rows * env.cols
     action_size = env.action_space.n
 
@@ -326,13 +326,11 @@ def train_drl_agent(config:Dict[str, str]):
 
     for e in range(config["episodes"]):
         state, info = env.reset()
-        # state = np.reshape(state, [1, agent.state_size])
 
         done = False
         while not done:
             action = agent.act(state)
             next_state, reward, done, *_ = env.step(action)
-            # next_state = np.reshape(next_state, [1, agent.state_size])
             agent.remember(state, action, reward, next_state, done)
             state = next_state
 
@@ -340,6 +338,6 @@ def train_drl_agent(config:Dict[str, str]):
             step_count += 1
 
             if step_count % 10000 == 0 and step_count > config["memory_size"]:
-                agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}.pt")
+                agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}")
         if len(agent.memory) == config['memory_size']:
             agent.update_epsilon()
