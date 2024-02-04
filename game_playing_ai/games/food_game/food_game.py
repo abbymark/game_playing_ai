@@ -14,7 +14,8 @@ import sys
 import random
 import datetime
 import os
-from typing import Dict
+from typing import Dict, List, Literal
+import json
 
 # Map specification
 # 0: Empty
@@ -32,9 +33,12 @@ class FoodGame:
     GAME_WIDTH = 800
     GAME_HEIGHT = 600
 
-    def __init__(self, rows=30, cols=40, n_food=10, render_mode="human", is_training=False, solo_training=False):
+    def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
+                 is_training:bool=False, solo_training:bool=False, drl_model_path:str=None):
         self.render_mode = render_mode
         self.solo_training = solo_training
+        self.rows = rows
+        self.cols = cols
 
         if self.render_mode == "human":
             pygame.init()
@@ -56,17 +60,14 @@ class FoodGame:
 
 
         # Agents
-        self.playable_agent = PlayableAgent(30, 40)
+        self.playable_agent = PlayableAgent(rows, cols)
         self.map = self.playable_agent.set_pos_in_map(self.map)
-        self.preprogrammed_agent = PreprogrammedAgent(30, 40)
+        self.preprogrammed_agent = PreprogrammedAgent(rows, cols)
         self.map = self.preprogrammed_agent.set_pos_in_map(self.map)
         if not is_training:
-            self.drl_agent = DQNAgent(rows * cols, 4, is_training=False)
-            sorted_models = sorted(os.listdir("data/models"), reverse=True)
-            if len(sorted_models) > 0:
-                self.drl_agent.load(f"data/models/{sorted_models[0]}")
-                print(f"Loaded model: {sorted_models[0]}")
-        self.drl_agent_sprite = DQNAgentSprite(30, 40)
+            self.drl_agent = self._load_drl_agent(drl_model_path)
+            
+        self.drl_agent_sprite = DQNAgentSprite(rows, cols)
         self.map = self.drl_agent_sprite.set_pos_in_map(self.map)
 
 
@@ -74,6 +75,11 @@ class FoodGame:
         self.foods = Food.generate_foods(rows, cols, n_food)
         for food in self.foods:
             self.map = food.set_pos_in_map(self.map)
+    
+    def _load_drl_agent(self, drl_model_path:str):
+        if drl_model_path is None:
+            raise ValueError("drl_model_path is required")
+        return DQNAgent.load(drl_model_path, is_training=False)
 
     def _setup_train_side_panel(self):
         self.manager = pygame_gui.UIManager((self.WIDTH, self.HEIGHT), "theme.json")
@@ -186,19 +192,19 @@ class FoodGame:
             if self.playable_agent.pos == food.pos:
                 self.playable_agent.food_collected += 1
                 self.foods.remove(food)
-                self.foods = Food.generate_foods(30, 40, 1, self.foods)
+                self.foods = Food.generate_foods(self.rows, self.cols, 1, self.foods)
                 self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
             elif self.preprogrammed_agent.pos == food.pos:
                 self.preprogrammed_agent.food_collected += 1
                 self.foods.remove(food)
-                self.foods = Food.generate_foods(30, 40, 1, self.foods)
+                self.foods = Food.generate_foods(self.rows, self.cols, 1, self.foods)
                 self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
             elif self.drl_agent_sprite.pos == food.pos:
                 self.drl_agent_sprite.food_collected += 1
                 self.foods.remove(food)
-                self.foods = Food.generate_foods(30, 40, 1, self.foods)
+                self.foods = Food.generate_foods(self.rows, self.cols, 1, self.foods)
                 self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
     
@@ -304,40 +310,3 @@ class GridFoodGame(gym.Env):
         return self.game.train(action)
 
     
-
-
-
-    
-
-def train_drl_agent(config:Dict[str, str]):
-    env = GridFoodGame(config["render"], 30, 40, config['food_count'], config['solo_training'])
-    state_size = env.rows * env.cols
-    action_size = env.action_space.n
-
-    agent = DQNAgent(state_size, action_size, config['memory_size'], config['gamma'], config['epsilon_min'], config['epsilon_decay'], 
-                     config['learning_rate'],  config['target_update_freq'], config['nn_type'], is_training=True)
-
-    # sorted_models = sorted(os.listdir("data/models"), reverse=True)
-    # if len(sorted_models) > 0:
-    #     agent.load(f"data/models/{sorted_models[0]}")
-
-
-    step_count = 0
-
-    for e in range(config["episodes"]):
-        state, info = env.reset()
-
-        done = False
-        while not done:
-            action = agent.act(state)
-            next_state, reward, done, *_ = env.step(action)
-            agent.remember(state, action, reward, next_state, done)
-            state = next_state
-
-            agent.replay(config["batch_size"])
-            step_count += 1
-
-            if step_count % 10000 == 0 and step_count > config["memory_size"]:
-                agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}")
-        if len(agent.memory) == config['memory_size']:
-            agent.update_epsilon()

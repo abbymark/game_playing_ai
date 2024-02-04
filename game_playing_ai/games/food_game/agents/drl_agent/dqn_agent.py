@@ -16,10 +16,12 @@ import json
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DQNAgent:
-    def __init__(self, state_size:int, action_size:int, memory_size:int=10000, 
+    def __init__(self, rows:int, cols:int, action_size:int, memory_size:int=10000, 
                  gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.999999, 
                  learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True):
-        self.state_size = state_size
+        self.rows = rows
+        self.cols = cols
+        self.state_size = rows * cols
         self.action_size = action_size
         self.memory_size = memory_size
         self.memory = deque(maxlen=self.memory_size)
@@ -120,39 +122,22 @@ class DQNAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-    def load(self, name):
-        self.model.load_state_dict(torch.load(name + "/model.pt"))
-        with open(name + "/config.json", "r") as f:
+    @staticmethod
+    def load(name:str, is_training:bool):
+        with open(f"{name}/config.json", "r") as f:
             config = json.load(f)
-            self.state_size = config["state_size"]
-            self.action_size = config["action_size"]
-            self.memory_size = config["memory_size"]
-            self.gamma = config["gamma"]
-            self.epsilon_min = config["epsilon_min"]
-            self.epsilon_decay = config["epsilon_decay"]
-            self.learning_rate = config["learning_rate"]
-            self.target_update_freq = config["target_update_freq"]
-            self.nn_type = config["nn_type"]
-            self.model = self.get_model(self.nn_type)
-            self.target_model = self.get_model(self.nn_type)
-            self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-            self.criterion = nn.SmoothL1Loss()
-            self.model.load_state_dict(torch.load(name + "/model.pt"))
-            self.target_model.load_state_dict(torch.load(name + "/model.pt"))
+        agent = DQNAgent(config['rows'], config['cols'], config['action_size'], nn_type=config['nn_type'], is_training=is_training)
+        agent.model.load_state_dict(torch.load(f"{name}/model.pt"))
+        return agent
     
     def save(self, name):
-        os.makedirs(os.path.dirname(name), exist_ok=True)
+        os.makedirs(name, exist_ok=True)
         torch.save(self.model.state_dict(), f"{name}/model.pt")
         with open(f"{name}/config.json", "w") as f:
             json.dump({
-                "state_size": self.state_size,
-                "action_size": self.action_size,
-                "memory_size": self.memory_size,
-                "gamma": self.gamma,
-                "epsilon_min": self.epsilon_min,
-                "epsilon_decay": self.epsilon_decay,
-                "learning_rate": self.learning_rate,
-                "target_update_freq": self.target_update_freq,
+                'rows': self.rows,
+                'cols': self.cols,
+                "action_size": int(self.action_size),
                 "nn_type": self.nn_type,
             }, f)
 
