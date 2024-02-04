@@ -1,4 +1,5 @@
-from game_playing_ai.games.food_game.food_game import FoodGame, train_drl_agent
+from game_playing_ai.games.food_game.food_game import FoodGame
+from game_playing_ai.games.food_game.trainer import Trainer
 
 import pygame
 import pygame_gui
@@ -12,19 +13,12 @@ class GameStarter:
         self.height = 600
         self.screen = pygame.display.set_mode((self.width, self.height))
         self.manager = pygame_gui.UIManager((self.width, self.height), "theme.json")
-        self.main_menu_panel = pygame_gui.elements.UIPanel(relative_rect=pygame.Rect((0, 0), (self.width, self.height)), manager=self.manager)
-        self.game_title_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 0), (300, 100)), 
-                                                            container=self.main_menu_panel, anchors={"centerx": "centerx"},
-                                                            text='Game Playing AI', manager=self.manager, object_id="#main_title")
+        self._main_menu_panel()
         
-        self.food_game_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100, 100), (150, 50)), 
-                                                             container=self.main_menu_panel, anchors={"centerx": "centerx"},
-                                                             text='Run Food Game', manager=self.manager)
-        self.food_game_train_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((100, 100), (150, 50)), 
-                                                                   container=self.main_menu_panel, anchors={"centerx": "centerx"},
-                                                             text='Train Food Game', manager=self.manager)
+        self.page_state = "main_menu"  # main_menu, food_game_play_panel, food_game_train_panel
 
-        self.config = {}
+        self.food_game_train_config = {}
+        self.food_game_play_config = {}
 
         pygame.display.set_caption("Game Playing AI")
         self.clock = pygame.time.Clock()
@@ -50,53 +44,146 @@ class GameStarter:
                 pygame.quit()
                 sys.exit()
             elif event.type ==pygame_gui.UI_BUTTON_PRESSED:
-                if event.ui_element == self.food_game_button:
-                    food_game = FoodGame(render_mode="human")
-                    food_game.run()
-                elif event.ui_element == self.food_game_train_button:
-                    self.main_menu_panel.hide()
-                    self._dqn_train_config_panel()
-                elif event.ui_element == self.train_button:
-                    train_drl_agent(self.config)
-                elif event.ui_element == self.back_button:
-                    self.train_config_panel.hide()
-                    self.main_menu_panel.show()
+                if self.page_state == "main_menu":
+                    if event.ui_element == self.food_game_play_button:
+                        self._food_game_play_panel()
+                        self.main_menu_panel.hide()
+                        self.page_state = "food_game_play_panel"
+                    elif event.ui_element == self.food_game_train_button:
+                        self.main_menu_panel.hide()
+                        self._dqn_train_config_panel()
+                        self.page_state = "food_game_train_panel"
+
+                if self.page_state == "food_game_play_panel":
+                    if event.ui_element == self.food_game_run_button:
+                        food_game = FoodGame(rows = self.food_game_play_config["rows"], cols = self.food_game_play_config["cols"], drl_model_path=self.food_game_play_config["model_path"])
+                        food_game.run()
+                    elif event.ui_element == self.food_game_back_button:
+                        self.food_game_play_panel.hide()
+                        self.main_menu_panel.show()
+                        self.page_state = "main_menu"
+
+                if self.page_state == "food_game_train_panel":
+                    if event.ui_element == self.train_button:
+                        trainer = Trainer()
+                        trainer.train_drl_agent(self.food_game_train_config)
+                    elif event.ui_element == self.back_button:
+                        self.train_config_panel.hide()
+                        self.main_menu_panel.show()
+                        self.page_state = "main_menu"
+
+
+
             elif event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
                 if event.ui_element == self.algorithm_drop_down_menu:
-                    self.config["algorithm"] = event.text
+                    self.food_game_train_config["algorithm"] = event.text
                 elif event.ui_element == self.render_drop_down_menu:
-                    self.config["render"] = event.text
+                    self.food_game_train_config["render"] = event.text
                 elif event.ui_element == self.nn_type_drop_down_menu:
-                    self.config["nn_type"] = event.text
+                    self.food_game_train_config["nn_type"] = event.text
             elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
-                if event.ui_element == self.memory_size_text_entry:
-                    self.config["memory_size"] = int(event.text) if event.text != "" else 0
+
+                # Food Game Play Config
+                if event.ui_element == self.model_path_text_entry:
+                    self.food_game_play_config["model_path"] = event.text
+                elif event.ui_element == self.rows_text_entry:
+                    self.food_game_play_config["rows"] = int(event.text) if event.text != "" else 0
+                elif event.ui_element == self.cols_text_entry:
+                    self.food_game_play_config["cols"] = int(event.text) if event.text != "" else 0
+
+                # Food Game Train Config
+                elif event.ui_element == self.memory_size_text_entry:
+                    self.food_game_train_config["memory_size"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.gamma_text_entry:
-                    self.config["gamma"] = float(event.text) if event.text != "" else 0
+                    self.food_game_train_config["gamma"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.epsilon_min_text_entry:
-                    self.config["epsilon_min"] = float(event.text) if event.text != "" else 0
+                    self.food_game_train_config["epsilon_min"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.epsilon_decay_text_entry:
-                    self.config["epsilon_decay"] = float(event.text) if event.text != "" else 0
+                    self.food_game_train_config["epsilon_decay"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.learning_rate_text_entry:
-                    self.config["learning_rate"] = float(event.text) if event.text != "" else 0
+                    self.food_game_train_config["learning_rate"] = float(event.text) if event.text != "" else 0
                 elif event.ui_element == self.batch_size_text_entry:
-                    self.config["batch_size"] = int(event.text) if event.text != "" else 0
+                    self.food_game_train_config["batch_size"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.episodes_text_entry:
-                    self.config["episodes"] = int(event.text) if event.text != "" else 0
+                    self.food_game_train_config["episodes"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.map_size_rows_text_entry:
-                    self.config["map_size_rows"] = int(event.text) if event.text != "" else 0
+                    self.food_game_train_config["map_size_rows"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.map_size_cols_text_entry:
-                    self.config["map_size_cols"] = int(event.text) if event.text != "" else 0
+                    self.food_game_train_config["map_size_cols"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.food_count_text_entry:
-                    self.config["food_count"] = int(event.text) if event.text != "" else 0
+                    self.food_game_train_config["food_count"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.agent_input_col_size_text_entry:
-                    self.config["agent_input_col_size"] = int(event.text) if event.text != "" else 0
+                    self.food_game_train_config["agent_input_col_size"] = int(event.text) if event.text != "" else 0
                 elif event.ui_element == self.agent_input_row_size_text_entry:
-                    self.config["agent_input_row_size"] = int(event.text) if event.text != "" else 0
+                    self.food_game_train_config["agent_input_row_size"] = int(event.text) if event.text != "" else 0
 
 
             self.manager.process_events(event)
     
+    def _main_menu_panel(self):
+        self.main_menu_panel = pygame_gui.elements.UIPanel(relative_rect=pygame.Rect((0, 0), (self.width, self.height)), manager=self.manager)
+        self.game_title_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 0), (300, 100)), 
+                                                            container=self.main_menu_panel, anchors={"centerx": "centerx"},
+                                                            text='Game Playing AI', manager=self.manager, object_id="#main_title")
+        
+        self.food_game_play_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100, 100), (150, 50)), 
+                                                             container=self.main_menu_panel, anchors={"centerx": "centerx"},
+                                                             text='Play Food Game', manager=self.manager)
+        self.food_game_train_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((100, 100), (150, 50)), 
+                                                                   container=self.main_menu_panel, anchors={"centerx": "centerx"},
+                                                             text='Train Food Game', manager=self.manager)
+    
+    def _food_game_play_panel(self):
+        self.food_game_play_panel = pygame_gui.elements.UIPanel(relative_rect=pygame.Rect((0, 0), (self.width, self.height)), 
+                                                              manager=self.manager, object_id="#play_panel")
+        self.food_game_play_title_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 0), (300, 50)), 
+                                                            container=self.food_game_play_panel, anchors={"centerx": "centerx"},
+                                                            text='Food Game', manager=self.manager, object_id="#main_title")
+        
+        # Model Path
+        self.model_path_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,50), (150, 30)),
+                                                              container=self.food_game_play_panel,
+                                                              text='Model Path', manager=self.manager)
+        
+        self.model_path_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 50), (500, 30)), 
+                                                            container=self.food_game_play_panel,
+                                                            manager=self.manager)
+        self.food_game_play_config["model_path"] = ""
+
+        # Rows
+        self.rows_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,100), (150, 30)), 
+                                                            container=self.food_game_play_panel,
+                                                            text='Rows', manager=self.manager)
+        
+        self.rows_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 100), (100, 30)), 
+                                                            container=self.food_game_play_panel,
+                                                            initial_text="30",
+                                                            manager=self.manager)
+        self.food_game_play_config["rows"] = 30
+
+        # Cols
+        self.cols_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,150), (150, 30)), 
+                                                            container=self.food_game_play_panel,
+                                                            text='Cols', manager=self.manager)
+        
+        self.cols_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 150), (100, 30)), 
+                                                            container=self.food_game_play_panel,
+                                                            initial_text="40",
+                                                            manager=self.manager)
+        self.food_game_play_config["cols"] = 40
+
+
+        # Run button
+        self.food_game_run_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100, 550), (150, 50)), 
+                                                             container=self.food_game_play_panel, anchors={"centerx": "centerx"},
+                                                             text='Run', manager=self.manager)
+        # Back button
+        self.food_game_back_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((100, 550), (150, 50)),
+                                                        container=self.food_game_play_panel, anchors={"centerx": "centerx"},
+                                                        text='Back', manager=self.manager)
+
+
+
     def _dqn_train_config_panel(self):
         self.train_config_panel = pygame_gui.elements.UIPanel(relative_rect=pygame.Rect((0, 0), (self.width, self.height)), 
                                                               manager=self.manager, object_id="#config_panel")
@@ -113,7 +200,7 @@ class GameStarter:
                                                                     manager=self.manager,
                                                                     options_list=["DQN"],
                                                                     starting_option="DQN")
-        self.config["algorithm"] = "DQN"
+        self.food_game_train_config["algorithm"] = "DQN"
 
         # Memory Size
         self.memory_size_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,100), (150, 30)), 
@@ -123,7 +210,7 @@ class GameStarter:
                                                             container=self.train_config_panel,
                                                             initial_text="100000",
                                                             manager=self.manager)
-        self.config["memory_size"] = 100000
+        self.food_game_train_config["memory_size"] = 100000
 
         # Gamma
         self.gamma_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,150), (150, 30)), 
@@ -133,7 +220,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="0.95",
                                                                     manager=self.manager)
-        self.config["gamma"] = 0.95
+        self.food_game_train_config["gamma"] = 0.95
 
         # Epsilon min
         self.epsilon_min_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,200), (150, 30)), 
@@ -143,7 +230,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="0.01",
                                                                     manager=self.manager)
-        self.config["epsilon_min"] = 0.01
+        self.food_game_train_config["epsilon_min"] = 0.01
 
         # Epsilon decay
         self.epsilon_decay_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,250), (150, 30)), 
@@ -153,7 +240,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="0.995",
                                                                     manager=self.manager)
-        self.config["epsilon_decay"] = 0.995
+        self.food_game_train_config["epsilon_decay"] = 0.995
 
         # Learning rate
         self.learning_rate_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,300), (150, 30)), 
@@ -163,7 +250,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="0.0001",
                                                                     manager=self.manager)
-        self.config["learning_rate"] = 0.0001
+        self.food_game_train_config["learning_rate"] = 0.0001
 
         # Batch size
         self.batch_size_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,350), (150, 30)), 
@@ -173,7 +260,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="128",
                                                                     manager=self.manager)
-        self.config["batch_size"] = 128
+        self.food_game_train_config["batch_size"] = 128
 
         # Episodes
         self.episodes_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,400), (150, 30)), 
@@ -183,7 +270,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="1000",
                                                                     manager=self.manager)
-        self.config["episodes"] = 1000
+        self.food_game_train_config["episodes"] = 1000
 
         # Render dropdown memu(human, rgb_array)
         self.render_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,450), (150, 30)), 
@@ -194,7 +281,7 @@ class GameStarter:
                                                                     manager=self.manager,
                                                                     options_list=["human", "rgb_array"],
                                                                     starting_option="human")
-        self.config["render"] = "human"
+        self.food_game_train_config["render"] = "human"
 
         # nn update frequency
         self.nn_update_frequency_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,500), (150, 30)),
@@ -204,7 +291,7 @@ class GameStarter:
                                                                         container=self.train_config_panel,
                                                                         initial_text="1000",
                                                                         manager=self.manager)
-        self.config["target_update_freq"] = 1000
+        self.food_game_train_config["target_update_freq"] = 1000
 
 
 
@@ -217,7 +304,7 @@ class GameStarter:
                                                                     manager=self.manager,
                                                                     options_list=["DNN", "CNN"],
                                                                     starting_option="DNN")
-        self.config["nn_type"] = "DNN"
+        self.food_game_train_config["nn_type"] = "DNN"
 
 
         # map size: rows
@@ -228,9 +315,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="30",
                                                                     manager=self.manager)
-        self.config["map_size_rows"] = 30
-        self.map_size_rows_label.disable()
-        self.map_size_rows_text_entry.disable()
+        self.food_game_train_config["map_size_rows"] = 30
 
         # map size: cols
         self.map_size_cols_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,150), (150, 30)), 
@@ -240,9 +325,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="40",
                                                                     manager=self.manager)
-        self.config["map_size_cols"] = 40
-        self.map_size_cols_label.disable()
-        self.map_size_cols_text_entry.disable()
+        self.food_game_train_config["map_size_cols"] = 40
 
         # food count
         self.food_count_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,200), (150, 30)), 
@@ -252,9 +335,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="10",
                                                                     manager=self.manager)
-        self.config["food_count"] = 10
-        self.food_count_label.disable()
-        self.food_count_text_entry.disable()
+        self.food_game_train_config["food_count"] = 10
 
         # Agent input colum size
         self.agent_input_col_size_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,250), (150, 30)), 
@@ -264,7 +345,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="5",
                                                                     manager=self.manager)
-        self.config["agent_view_col_size"] = 5
+        self.food_game_train_config["agent_view_col_size"] = 5
         self.agent_input_col_size_label.disable()
         self.agent_input_col_size_text_entry.disable()
 
@@ -276,7 +357,7 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     initial_text="5",
                                                                     manager=self.manager)
-        self.config["agent_view_row_size"] = 5
+        self.food_game_train_config["agent_view_row_size"] = 5
         self.agent_input_row_size_label.disable()
         self.agent_input_row_size_text_entry.disable()
 
@@ -289,7 +370,7 @@ class GameStarter:
                                                                     manager=self.manager,
                                                                     options_list=["True", "False"],
                                                                     starting_option="True")
-        self.config["solo_training"] = True
+        self.food_game_train_config["solo_training"] = True
 
 
         # Train button
