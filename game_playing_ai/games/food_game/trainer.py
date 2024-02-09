@@ -9,11 +9,11 @@ class Trainer:
         pass
 
     def train_drl_agent(self, config:Dict[str, str]):
-        env = GridFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], config['food_count'], config['solo_training'])
+        env = GridFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], config['food_count'], config['solo'])
         action_size = env.action_space.n
 
         agent = DQNAgent(env.rows, env.cols, action_size, config['memory_size'], config['gamma'], config['epsilon_min'], config['epsilon_decay'], 
-                        config['learning_rate'],  config['target_update_freq'], config['nn_type'], is_training=True)
+                        config['batch_size'], config['learning_rate'],  config['target_update_freq'], config['nn_type'], is_training=True)
 
         # sorted_models = sorted(os.listdir("data/models"), reverse=True)
         # if len(sorted_models) > 0:
@@ -28,11 +28,12 @@ class Trainer:
             done = False
             while not done:
                 action = agent.act(state)
+
                 next_state, reward, done, *_ = env.step(action)
                 agent.remember(state, action, reward, next_state, done)
                 state = next_state
 
-                agent.replay(config["batch_size"])
+                agent.replay()
                 step_count += 1
 
                 if step_count % 10000 == 0 and step_count > config["memory_size"]:

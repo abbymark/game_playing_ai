@@ -56,7 +56,8 @@ class GameStarter:
 
                 if self.page_state == "food_game_play_panel":
                     if event.ui_element == self.food_game_run_button:
-                        food_game = FoodGame(rows = self.food_game_play_config["rows"], cols = self.food_game_play_config["cols"], drl_model_path=self.food_game_play_config["model_path"])
+                        food_game = FoodGame(rows = self.food_game_play_config["rows"], cols = self.food_game_play_config["cols"], 
+                                             drl_model_path=self.food_game_play_config["model_path"], solo=self.food_game_play_config["solo"])
                         food_game.run()
                     elif event.ui_element == self.food_game_back_button:
                         self.food_game_play_panel.hide()
@@ -75,47 +76,57 @@ class GameStarter:
 
 
             elif event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
-                if event.ui_element == self.algorithm_drop_down_menu:
-                    self.food_game_train_config["algorithm"] = event.text
-                elif event.ui_element == self.render_drop_down_menu:
-                    self.food_game_train_config["render"] = event.text
-                elif event.ui_element == self.nn_type_drop_down_menu:
-                    self.food_game_train_config["nn_type"] = event.text
+                if self.page_state == "food_game_play_panel":
+                    if event.ui_element == self.solo_running_drop_down_menu:
+                        self.food_game_play_config["solo_running"] = True if event.text == "True" else False
+
+
+                elif self.page_state == "food_game_train_panel":
+                    if event.ui_element == self.algorithm_drop_down_menu:
+                        self.food_game_train_config["algorithm"] = event.text
+                    elif event.ui_element == self.render_drop_down_menu:
+                        self.food_game_train_config["render"] = event.text
+                    elif event.ui_element == self.nn_type_drop_down_menu:
+                        self.food_game_train_config["nn_type"] = event.text
+                    elif event.ui_element == self.solo_training_drop_down_menu:
+                        self.food_game_train_config["solo_training"] = True if event.text == "True" else False
             elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
 
                 # Food Game Play Config
-                if event.ui_element == self.model_path_text_entry:
-                    self.food_game_play_config["model_path"] = event.text
-                elif event.ui_element == self.rows_text_entry:
-                    self.food_game_play_config["rows"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.cols_text_entry:
-                    self.food_game_play_config["cols"] = int(event.text) if event.text != "" else 0
+                if self.page_state == "food_game_play_panel":
+                    if event.ui_element == self.model_path_text_entry:
+                        self.food_game_play_config["model_path"] = event.text
+                    elif event.ui_element == self.rows_text_entry:
+                        self.food_game_play_config["rows"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.cols_text_entry:
+                        self.food_game_play_config["cols"] = int(event.text) if event.text != "" else 0
 
                 # Food Game Train Config
-                elif event.ui_element == self.memory_size_text_entry:
-                    self.food_game_train_config["memory_size"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.gamma_text_entry:
-                    self.food_game_train_config["gamma"] = float(event.text) if event.text != "" else 0
-                elif event.ui_element == self.epsilon_min_text_entry:
-                    self.food_game_train_config["epsilon_min"] = float(event.text) if event.text != "" else 0
-                elif event.ui_element == self.epsilon_decay_text_entry:
-                    self.food_game_train_config["epsilon_decay"] = float(event.text) if event.text != "" else 0
-                elif event.ui_element == self.learning_rate_text_entry:
-                    self.food_game_train_config["learning_rate"] = float(event.text) if event.text != "" else 0
-                elif event.ui_element == self.batch_size_text_entry:
-                    self.food_game_train_config["batch_size"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.episodes_text_entry:
-                    self.food_game_train_config["episodes"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.map_size_rows_text_entry:
-                    self.food_game_train_config["map_size_rows"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.map_size_cols_text_entry:
-                    self.food_game_train_config["map_size_cols"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.food_count_text_entry:
-                    self.food_game_train_config["food_count"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.agent_input_col_size_text_entry:
-                    self.food_game_train_config["agent_input_col_size"] = int(event.text) if event.text != "" else 0
-                elif event.ui_element == self.agent_input_row_size_text_entry:
-                    self.food_game_train_config["agent_input_row_size"] = int(event.text) if event.text != "" else 0
+                elif self.page_state == "food_game_train_panel":
+                    if event.ui_element == self.memory_size_text_entry:
+                        self.food_game_train_config["memory_size"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.gamma_text_entry:
+                        self.food_game_train_config["gamma"] = float(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.epsilon_min_text_entry:
+                        self.food_game_train_config["epsilon_min"] = float(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.epsilon_decay_text_entry:
+                        self.food_game_train_config["epsilon_decay"] = float(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.learning_rate_text_entry:
+                        self.food_game_train_config["learning_rate"] = float(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.batch_size_text_entry:
+                        self.food_game_train_config["batch_size"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.episodes_text_entry:
+                        self.food_game_train_config["episodes"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.map_size_rows_text_entry:
+                        self.food_game_train_config["map_size_rows"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.map_size_cols_text_entry:
+                        self.food_game_train_config["map_size_cols"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.food_count_text_entry:
+                        self.food_game_train_config["food_count"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.agent_input_col_size_text_entry:
+                        self.food_game_train_config["agent_input_col_size"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.agent_input_row_size_text_entry:
+                        self.food_game_train_config["agent_input_row_size"] = int(event.text) if event.text != "" else 0
 
 
             self.manager.process_events(event)
@@ -171,6 +182,19 @@ class GameStarter:
                                                             initial_text="40",
                                                             manager=self.manager)
         self.food_game_play_config["cols"] = 40
+
+        # Solo runnning
+        self.solo_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,200), (150, 30)), 
+                                                            container=self.food_game_play_panel,
+                                                            text='Solo', manager=self.manager)
+        
+        self.solo_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((200, 200), (100, 30)),
+                                                                    container=self.food_game_play_panel,
+                                                                    manager=self.manager,
+                                                                    options_list=["True", "False"],
+                                                                    starting_option="True")
+        self.food_game_play_config["solo"] = True
+
 
 
         # Run button
@@ -362,15 +386,15 @@ class GameStarter:
         self.agent_input_row_size_text_entry.disable()
 
         # Solo training
-        self.solo_training_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,350), (150, 30)), 
+        self.solo_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,350), (150, 30)), 
                                                             container=self.train_config_panel,
-                                                            text='Solo Training', manager=self.manager)
-        self.solo_training_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((600, 350), (100, 30)),
+                                                            text='Solo', manager=self.manager)
+        self.solo_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((600, 350), (100, 30)),
                                                                     container=self.train_config_panel,
                                                                     manager=self.manager,
                                                                     options_list=["True", "False"],
                                                                     starting_option="True")
-        self.food_game_train_config["solo_training"] = True
+        self.food_game_train_config["solo"] = True
 
 
         # Train button

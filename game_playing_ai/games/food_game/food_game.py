@@ -34,9 +34,9 @@ class FoodGame:
     GAME_HEIGHT = 600
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
-                 is_training:bool=False, solo_training:bool=False, drl_model_path:str=None):
+                 is_training:bool=False, solo:bool=False, drl_model_path:str=None):
         self.render_mode = render_mode
-        self.solo_training = solo_training
+        self.solo = solo
         self.rows = rows
         self.cols = cols
 
@@ -72,9 +72,9 @@ class FoodGame:
 
 
         # Food
-        self.foods = Food.generate_foods(rows, cols, n_food)
+        self.foods = Food.generate_foods(self.map, n_food)
         for food in self.foods:
-            self.map = food.set_pos_in_map(self.map)
+            self.map[food.y][food.x] = 2
     
     def _load_drl_agent(self, drl_model_path:str):
         if drl_model_path is None:
@@ -102,6 +102,36 @@ class FoodGame:
                                                                         manager=self.manager, object_id="#run_speed_slider", 
                                                                         start_value=5, value_range=(5, 100))
     
+        self.playable_agent_food_collected_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 200), (300, 50)), 
+                                                                                container=self.container, 
+                                                                                anchors={"centerx": "centerx"},
+                                                                                manager=self.manager, object_id="#side_panel_label", text="Playable Agent Food Collected: ")
+
+        self.playable_agent_food_collected_value_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 250), (300, 50)), 
+                                                                                    container=self.container, 
+                                                                                    anchors={"centerx": "centerx"},
+                                                                                    manager=self.manager, object_id="#side_panel_label", text="0")
+        
+        self.preprogrammed_agent_food_collected_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 300), (300, 50)), 
+                                                                                    container=self.container, 
+                                                                                    anchors={"centerx": "centerx"},
+                                                                                    manager=self.manager, object_id="#side_panel_label", text="Preprogrammed Agent Food Collected: ")
+        
+        self.preprogrammed_agent_food_collected_value_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 350), (300, 50)), 
+                                                                                        container=self.container, 
+                                                                                        anchors={"centerx": "centerx"},
+                                                                                        manager=self.manager, object_id="#side_panel_label", text="0")
+        
+        self.drl_agent_sprite_food_collected_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 400), (300, 50)), 
+                                                                                    container=self.container, 
+                                                                                    anchors={"centerx": "centerx"},
+                                                                                    manager=self.manager, object_id="#side_panel_label", text="DRL Agent Food Collected: ")
+        
+        self.drl_agent_sprite_food_collected_value_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 450), (300, 50)), 
+                                                                                        container=self.container, 
+                                                                                        anchors={"centerx": "centerx"},
+                                                                                        manager=self.manager, object_id="#side_panel_label", text="0")
+
     def _setup_run_side_panel(self):
         self.manager = pygame_gui.UIManager((self.WIDTH, self.HEIGHT), "theme.json")
         self.container = pygame_gui.elements.UIPanel(relative_rect=pygame.Rect((self.GAME_WIDTH, 0), (self.WIDTH - self.GAME_WIDTH, self.HEIGHT)), 
@@ -122,6 +152,37 @@ class FoodGame:
                                                                         anchors={"centerx": "centerx"},
                                                                         manager=self.manager, object_id="#run_speed_slider", 
                                                                         start_value=5, value_range=(5, 100))
+
+        self.playable_agent_food_collected_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 200), (300, 50)), 
+                                                                                container=self.container, 
+                                                                                anchors={"centerx": "centerx"},
+                                                                                manager=self.manager, object_id="#side_panel_label", text="Playable Agent Food: ")
+
+        self.playable_agent_food_collected_value_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 250), (300, 50)), 
+                                                                                    container=self.container, 
+                                                                                    anchors={"centerx": "centerx"},
+                                                                                    manager=self.manager, object_id="#side_panel_label", text="0")
+        
+        self.preprogrammed_agent_food_collected_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 300), (300, 50)), 
+                                                                                    container=self.container, 
+                                                                                    anchors={"centerx": "centerx"},
+                                                                                    manager=self.manager, object_id="#side_panel_label", text="Preprogrammed Agent Food: ")
+        
+        self.preprogrammed_agent_food_collected_value_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 350), (300, 50)), 
+                                                                                        container=self.container, 
+                                                                                        anchors={"centerx": "centerx"},
+                                                                                        manager=self.manager, object_id="#side_panel_label", text="0")
+        
+        self.drl_agent_sprite_food_collected_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 400), (300, 50)), 
+                                                                                    container=self.container, 
+                                                                                    anchors={"centerx": "centerx"},
+                                                                                    manager=self.manager, object_id="#side_panel_label", text="DRL Agent Food: ")
+        
+        self.drl_agent_sprite_food_collected_value_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((0, 450), (300, 50)), 
+                                                                                        container=self.container, 
+                                                                                        anchors={"centerx": "centerx"},
+                                                                                        manager=self.manager, object_id="#side_panel_label", text="0")
+
 
     def run(self):
         while self.running:
@@ -159,7 +220,7 @@ class FoodGame:
             self.playable_agent.pos = prev_pos
         
         prev_pos = self.preprogrammed_agent.pos
-        if not self.solo_training:
+        if not self.solo:
             self.preprogrammed_agent.update(self.foods)
         if prev_pos != self.preprogrammed_agent.pos and self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] in [0, 2]:
             self.map[prev_pos[1]][prev_pos[0]] = 0
@@ -183,6 +244,9 @@ class FoodGame:
     def _draw(self):
         self.screen.fill((0, 0, 0))
         self.environment.draw(self.map)
+        self.playable_agent_food_collected_value_label.set_text(str(self.playable_agent.food_collected))
+        self.preprogrammed_agent_food_collected_value_label.set_text(str(self.preprogrammed_agent.food_collected))
+        self.drl_agent_sprite_food_collected_value_label.set_text(str(self.drl_agent_sprite.food_collected))
         self.screen.blit(self.canvas, self.canvas.get_rect())
         self.manager.draw_ui(self.screen)
         pygame.display.update()
@@ -192,19 +256,19 @@ class FoodGame:
             if self.playable_agent.pos == food.pos:
                 self.playable_agent.food_collected += 1
                 self.foods.remove(food)
-                self.foods = Food.generate_foods(self.rows, self.cols, 1, self.foods)
+                self.foods = Food.generate_foods(self.map, 1, self.foods)
                 self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
             elif self.preprogrammed_agent.pos == food.pos:
                 self.preprogrammed_agent.food_collected += 1
                 self.foods.remove(food)
-                self.foods = Food.generate_foods(self.rows, self.cols, 1, self.foods)
+                self.foods = Food.generate_foods(self.map, 1, self.foods)
                 self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
             elif self.drl_agent_sprite.pos == food.pos:
                 self.drl_agent_sprite.food_collected += 1
                 self.foods.remove(food)
-                self.foods = Food.generate_foods(self.rows, self.cols, 1, self.foods)
+                self.foods = Food.generate_foods(self.map, 1, self.foods)
                 self.map[self.foods[-1].y][self.foods[-1].x] = 2
                 break
     
@@ -215,20 +279,18 @@ class FoodGame:
             self._update(events, action)
             self._events(events)
             self._draw()
-            return self.map
         elif self.render_mode == "rgb_array":
             self._update(None, action)
-            return self.map
 
 
 class GridFoodGame(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array'], "render_fps": 5}
 
-    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo_training:bool):
+    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo:bool):
         self.rows = rows
         self.cols = cols
         self.n_food = n_food
-        self.solo_training = solo_training
+        self.solo = solo
 
 
         self.observation_space = spaces.Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
@@ -258,7 +320,7 @@ class GridFoodGame(gym.Env):
         self.prev_preprogrammed_agent_food_collected = 0
 
     def _get_obs(self):
-        return self.game.map
+        return self.game.map.copy()
     
     def _get_info(self):
         return {
@@ -267,9 +329,16 @@ class GridFoodGame(gym.Env):
 
     def reset(self, seed=None):
         super().reset(seed=seed)
-        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo_training=self.solo_training)
+        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo=self.solo)
 
         self._food_collected = 0
+        self.prev__food_collected = 0
+
+        self.playable_agent_food_collected = 0
+        self.prev_playable_agent_food_collected = 0
+
+        self.preprogrammed_agent_food_collected = 0
+        self.prev_preprogrammed_agent_food_collected = 0
         
         self.render(None)
 
@@ -280,9 +349,10 @@ class GridFoodGame(gym.Env):
     
     def step(self, action):
         
-
         self.render(action)
         self._food_collected = self.game.drl_agent_sprite.food_collected
+        self.playable_agent_food_collected = self.game.playable_agent.food_collected
+        self.preprogrammed_agent_food_collected = self.game.preprogrammed_agent.food_collected
         terminated = True if self._food_collected == self.n_food else False
 
         reward = 0
@@ -297,16 +367,15 @@ class GridFoodGame(gym.Env):
         if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
             reward += -0.1
 
-
         observation = self._get_obs()
         info = self._get_info()
-        
+
         self.prev__food_collected = self._food_collected
         self.prev_playable_agent_food_collected = self.playable_agent_food_collected
         self.prev_preprogrammed_agent_food_collected = self.preprogrammed_agent_food_collected
         return observation, reward, terminated, False, info
 
     def render(self, action):
-        return self.game.train(action)
+        self.game.train(action)
 
     

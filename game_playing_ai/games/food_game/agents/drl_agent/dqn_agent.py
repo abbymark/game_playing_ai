@@ -17,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DQNAgent:
     def __init__(self, rows:int, cols:int, action_size:int, memory_size:int=10000, 
-                 gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.999999, 
+                 gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.999999, batch_size:int=32,
                  learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True):
         self.rows = rows
         self.cols = cols
@@ -29,6 +29,7 @@ class DQNAgent:
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
+        self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.target_update_freq = target_update_freq
         self.nn_type = nn_type
@@ -63,19 +64,20 @@ class DQNAgent:
         act_values = self.model(state)
         return np.argmax(act_values.cpu().data.numpy())
 
-    def replay(self, batch_size):
+    def replay(self):
         self.update_step += 1
 
-        if len(self.memory) < self.memory_size or len(self.memory) < batch_size:
+        if len(self.memory) < self.memory_size or len(self.memory) < self.batch_size:
             return
     
-        minibatch = random.sample(self.memory, batch_size)
+        minibatch = random.sample(self.memory, self.batch_size)
         # Convert list of numpy arrays to single numpy array for each type of data
         states = np.array([x[0] for x in minibatch]) / 5  # normalize state
         actions = np.array([x[1] for x in minibatch])
         rewards = np.array([x[2] for x in minibatch])
         next_states = np.array([x[3] for x in minibatch]) / 5  # normalize next state
         dones = np.array([float(x[4]) for x in minibatch])
+
 
         # Convert numpy arrays to PyTorch tensors
         states = torch.FloatTensor(states).to(device)
@@ -86,6 +88,7 @@ class DQNAgent:
 
         # Predict Q-values for starting states
         Q_values = self.model(states)
+        action_Q_values = Q_values.gather(1, actions).squeeze()
 
         # Predict next Q-values for next states
         next_Q_values = self.target_model(next_states)
@@ -94,10 +97,10 @@ class DQNAgent:
         # Compute the target Q values
         targets = rewards + (self.gamma * max_next_Q_values * (1 - dones))
 
-        action_Q_values = Q_values.gather(1, actions).squeeze()
 
         # Loss calculation
         loss = self.criterion(action_Q_values, targets)
+
 
         # Optimize the model
         self.optimizer.zero_grad()
