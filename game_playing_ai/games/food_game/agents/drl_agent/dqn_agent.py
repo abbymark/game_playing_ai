@@ -12,16 +12,18 @@ import wandb
 
 import os
 import json
+from typing import Dict
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DQNAgent:
-    def __init__(self, rows:int, cols:int, action_size:int, memory_size:int=10000, 
+    def __init__(self, rows:int, cols:int, state_size:int, action_size:int, memory_size:int=10000, 
                  gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.999999, batch_size:int=32,
-                 learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True):
+                 learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True,
+                 use_featured_states:bool=False) -> None:
         self.rows = rows
         self.cols = cols
-        self.state_size = rows * cols
+        self.state_size = state_size
         self.action_size = action_size
         self.memory_size = memory_size
         self.memory = deque(maxlen=self.memory_size)
@@ -33,6 +35,7 @@ class DQNAgent:
         self.learning_rate = learning_rate
         self.target_update_freq = target_update_freq
         self.nn_type = nn_type
+        self.use_featured_states = use_featured_states
         self.model = self.get_model(self.nn_type)
         self.target_model = self.get_model(self.nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
@@ -41,12 +44,28 @@ class DQNAgent:
         self.is_training = is_training
         self.update_step = 0
 
-        self.logging_steps = 100
         self.loss_sum = 0
 
         if is_training:
             wandb.login()
-            wandb.init(project="food_game")
+            wandb.init(
+                project="food_game",
+                config={
+                    "rows": self.rows,
+                    "cols": self.cols,
+                    "state_size": int(self.state_size),
+                    "action_size": int(self.action_size),
+                    "memory_size": self.memory_size,
+                    "gamma": self.gamma,
+                    "epsilon_min": self.epsilon_min,
+                    "epsilon_decay": self.epsilon_decay,
+                    "batch_size": self.batch_size,
+                    "learning_rate": self.learning_rate,
+                    "target_update_freq": self.target_update_freq,
+                    "nn_type": self.nn_type,
+                    "use_featured_states": self.use_featured_states,
+                }
+            )
 
     def get_model(self, nn_type:str):
         if nn_type == 'DNN':
@@ -60,7 +79,7 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon and self.is_training:
             return random.randrange(self.action_size)
-        state = torch.FloatTensor(state).unsqueeze(0).to(device) / 5  # normalize state
+        state = torch.FloatTensor(state).unsqueeze(0).to(device) / 5 if not self.use_featured_states else torch.FloatTensor(state).unsqueeze(0).to(device) / max(self.rows, self.cols)  # normalize state
         act_values = self.model(state)
         return np.argmax(act_values.cpu().data.numpy())
 
@@ -72,10 +91,10 @@ class DQNAgent:
     
         minibatch = random.sample(self.memory, self.batch_size)
         # Convert list of numpy arrays to single numpy array for each type of data
-        states = np.array([x[0] for x in minibatch]) / 5  # normalize state
+        states = np.array([x[0] for x in minibatch]) / 5 if not self.use_featured_states else np.array([x[0] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
         actions = np.array([x[1] for x in minibatch])
         rewards = np.array([x[2] for x in minibatch])
-        next_states = np.array([x[3] for x in minibatch]) / 5  # normalize next state
+        next_states = np.array([x[3] for x in minibatch]) / 5 if not self.use_featured_states else np.array([x[3] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
         dones = np.array([float(x[4]) for x in minibatch])
 
 
@@ -110,17 +129,21 @@ class DQNAgent:
         # self.update_epsilon()
 
         self.loss_sum += loss.item()
-        if self.update_step % self.logging_steps == 0:
-            wandb.log({"loss": self.loss_sum / self.logging_steps})
-            wandb.log({"epsilon": self.epsilon})
-            self.loss_sum = 0
         
 
         # update target network
         if self.update_step % self.target_update_freq == 0:
             self.target_model.load_state_dict(self.model.state_dict())
 
-        
+    def get_log(self) -> Dict[str, float]:
+        log = {
+            "loss": self.loss_sum,
+            "epsilon": self.epsilon
+        }
+        self.loss_sum = 0
+        return log
+
+    
     def update_epsilon(self):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
@@ -129,7 +152,8 @@ class DQNAgent:
     def load(name:str, is_training:bool):
         with open(f"{name}/config.json", "r") as f:
             config = json.load(f)
-        agent = DQNAgent(config['rows'], config['cols'], config['action_size'], nn_type=config['nn_type'], is_training=is_training)
+        agent = DQNAgent(config['rows'], config['cols'], config['state_size'], config['action_size'], 
+                         nn_type=config['nn_type'], is_training=is_training, use_featured_states=config['use_featured_states'])
         agent.model.load_state_dict(torch.load(f"{name}/model.pt"))
         return agent
     
@@ -138,10 +162,19 @@ class DQNAgent:
         torch.save(self.model.state_dict(), f"{name}/model.pt")
         with open(f"{name}/config.json", "w") as f:
             json.dump({
-                'rows': self.rows,
-                'cols': self.cols,
+                "rows": self.rows,
+                "cols": self.cols,
+                "state_size": int(self.state_size),
                 "action_size": int(self.action_size),
+                "memory_size": self.memory_size,
+                "gamma": self.gamma,
+                "epsilon_min": self.epsilon_min,
+                "epsilon_decay": self.epsilon_decay,
+                "batch_size": self.batch_size,
+                "learning_rate": self.learning_rate,
+                "target_update_freq": self.target_update_freq,
                 "nn_type": self.nn_type,
+                "use_featured_states": self.use_featured_states,
             }, f)
 
 

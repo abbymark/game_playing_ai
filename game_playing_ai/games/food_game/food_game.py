@@ -34,11 +34,12 @@ class FoodGame:
     GAME_HEIGHT = 600
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
-                 is_training:bool=False, solo:bool=False, drl_model_path:str=None):
+                 is_training:bool=False, solo:bool=False, drl_model_path:str=None, use_featured_states:bool=False):
         self.render_mode = render_mode
         self.solo = solo
         self.rows = rows
         self.cols = cols
+        self.use_featured_states = use_featured_states
 
         if self.render_mode == "human":
             pygame.init()
@@ -189,7 +190,7 @@ class FoodGame:
             self.time_delta = self.clock.tick(self.run_speed)/1000.0
             events = pygame.event.get()
             state = np.reshape(self.map, (1, self.map.shape[0] * self.map.shape[1]))
-            action = self.drl_agent.act(state)
+            action = self.drl_agent.act(state) if not self.use_featured_states else self.drl_agent.act(self._get_featured_obs())
             self._update(events, action)
             self._events(events)
             self._draw()
@@ -281,19 +282,36 @@ class FoodGame:
             self._draw()
         elif self.render_mode == "rgb_array":
             self._update(None, action)
+    
+    def _get_featured_obs(self) -> List[List[int]]:
+        featured_state = []
+        for food in self.foods:
+            featured_state.append([food.x, food.y])
+        featured_state.append([self.playable_agent.x, self.playable_agent.y])
+        featured_state.append([self.preprogrammed_agent.x, self.preprogrammed_agent.y])
+        featured_state.append([self.drl_agent_sprite.x, self.drl_agent_sprite.y])
+        return featured_state
+
+    def get_obs(self, use_featured_states:bool) -> List[List[int]]:
+        if use_featured_states:
+            return self._get_featured_obs()
+        return self.map.copy()
 
 
 class GridFoodGame(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array'], "render_fps": 5}
 
-    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo:bool):
+    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo:bool, use_featured_states:bool):
         self.rows = rows
         self.cols = cols
         self.n_food = n_food
         self.solo = solo
+        self.use_featured_states = use_featured_states
 
-
-        self.observation_space = spaces.Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
+        if use_featured_states:
+            self.observation_space = spaces.Box(low=0, high=5, shape=(self.n_food + 3, 2), dtype=np.int8)
+        else:
+            self.observation_space = spaces.Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
 
         self.action_space = spaces.Discrete(4)
 
@@ -319,8 +337,6 @@ class GridFoodGame(gym.Env):
         self.preprogrammed_agent_food_collected = 0
         self.prev_preprogrammed_agent_food_collected = 0
 
-    def _get_obs(self):
-        return self.game.map.copy()
     
     def _get_info(self):
         return {
@@ -342,7 +358,7 @@ class GridFoodGame(gym.Env):
         
         self.render(None)
 
-        observation = self._get_obs()
+        observation = self.game.get_obs(self.use_featured_states)
         info = self._get_info()
 
         return observation, info
@@ -367,7 +383,7 @@ class GridFoodGame(gym.Env):
         if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
             reward += -0.1
 
-        observation = self._get_obs()
+        observation = self.game.get_obs(self.use_featured_states)
         info = self._get_info()
 
         self.prev__food_collected = self._food_collected

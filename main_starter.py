@@ -6,6 +6,7 @@ import pygame_gui
 
 import sys
 import threading
+import json
 class GameStarter:
     def __init__(self):
         pygame.init()
@@ -56,8 +57,14 @@ class GameStarter:
 
                 if self.page_state == "food_game_play_panel":
                     if event.ui_element == self.food_game_run_button:
-                        food_game = FoodGame(rows = self.food_game_play_config["rows"], cols = self.food_game_play_config["cols"], 
-                                             drl_model_path=self.food_game_play_config["model_path"], solo=self.food_game_play_config["solo"])
+                        with open(f"{self.food_game_play_config['model_path']}/config.json", "r") as f:
+                            config = json.load(f)
+
+                        food_game = FoodGame(rows = config["rows"], cols = config["cols"], 
+                                             drl_model_path=self.food_game_play_config["model_path"], 
+                                             solo=self.food_game_play_config["solo"], 
+                                             use_featured_states=config["use_featured_states"])
+
                         food_game.run()
                     elif event.ui_element == self.food_game_back_button:
                         self.food_game_play_panel.hide()
@@ -88,8 +95,10 @@ class GameStarter:
                         self.food_game_train_config["render"] = event.text
                     elif event.ui_element == self.nn_type_drop_down_menu:
                         self.food_game_train_config["nn_type"] = event.text
-                    elif event.ui_element == self.solo_training_drop_down_menu:
+                    elif event.ui_element == self.solo_drop_down_menu:
                         self.food_game_train_config["solo_training"] = True if event.text == "True" else False
+                    elif event.ui_element == self.use_featured_states_drop_down_menu:
+                        self.food_game_train_config["use_featured_states"] = True if event.text == "True" else False
             elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
 
                 # Food Game Play Config
@@ -117,6 +126,8 @@ class GameStarter:
                         self.food_game_train_config["batch_size"] = int(event.text) if event.text != "" else 0
                     elif event.ui_element == self.episodes_text_entry:
                         self.food_game_train_config["episodes"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.nn_update_frequency_text_entry:
+                        self.food_game_train_config["target_update_freq"] = int(event.text) if event.text != "" else 0
                     elif event.ui_element == self.map_size_rows_text_entry:
                         self.food_game_train_config["map_size_rows"] = int(event.text) if event.text != "" else 0
                     elif event.ui_element == self.map_size_cols_text_entry:
@@ -337,9 +348,9 @@ class GameStarter:
                                                             text='Map Size: Rows', manager=self.manager)
         self.map_size_rows_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 100), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="30",
+                                                                    initial_text="15",
                                                                     manager=self.manager)
-        self.food_game_train_config["map_size_rows"] = 30
+        self.food_game_train_config["map_size_rows"] = 15
 
         # map size: cols
         self.map_size_cols_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,150), (150, 30)), 
@@ -347,9 +358,9 @@ class GameStarter:
                                                             text='Map Size: Cols', manager=self.manager)
         self.map_size_cols_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 150), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="40",
+                                                                    initial_text="20",
                                                                     manager=self.manager)
-        self.food_game_train_config["map_size_cols"] = 40
+        self.food_game_train_config["map_size_cols"] = 20
 
         # food count
         self.food_count_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,200), (150, 30)), 
@@ -395,6 +406,17 @@ class GameStarter:
                                                                     options_list=["True", "False"],
                                                                     starting_option="True")
         self.food_game_train_config["solo"] = True
+
+        # Uses featured states
+        self.use_featured_states_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,400), (150, 30)), 
+                                                            container=self.train_config_panel,
+                                                            text='Use Featured States', manager=self.manager)
+        self.use_featured_states_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((600, 400), (100, 30)),
+                                                                    container=self.train_config_panel,
+                                                                    manager=self.manager,
+                                                                    options_list=["True", "False"],
+                                                                    starting_option="True")
+        self.food_game_train_config["use_featured_states"] = True
 
 
         # Train button
