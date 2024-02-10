@@ -19,8 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class DQNAgent:
     def __init__(self, rows:int, cols:int, state_size:int, action_size:int, memory_size:int=10000, 
                  gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.999999, batch_size:int=32,
-                 learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True,
-                 use_featured_states:bool=False) -> None:
+                 learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True) -> None:
         self.rows = rows
         self.cols = cols
         self.state_size = state_size * 6  # 6 is the number of classes for the one-hot encoding
@@ -35,7 +34,6 @@ class DQNAgent:
         self.learning_rate = learning_rate
         self.target_update_freq = target_update_freq
         self.nn_type = nn_type
-        self.use_featured_states = use_featured_states
         self.model = self.get_model(self.nn_type)
         self.target_model = self.get_model(self.nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
@@ -63,7 +61,6 @@ class DQNAgent:
                     "learning_rate": self.learning_rate,
                     "target_update_freq": self.target_update_freq,
                     "nn_type": self.nn_type,
-                    "use_featured_states": self.use_featured_states,
                 }
             )
 
@@ -79,7 +76,7 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon and self.is_training:
             return random.randrange(self.action_size)
-        state = torch.LongTensor(state).unsqueeze(0).to(device) # / 5 if not self.use_featured_states else torch.FloatTensor(state).unsqueeze(0).to(device) / max(self.rows, self.cols)  # normalize state
+        state = torch.LongTensor(state).unsqueeze(0).to(device)
         flat_next_states = state.view(state.shape[0], -1)
         one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
         state = one_hot_flat_next_states.view(*state.shape, -1)
@@ -95,10 +92,10 @@ class DQNAgent:
     
         minibatch = random.sample(self.memory, self.batch_size)
         # Convert list of numpy arrays to single numpy array for each type of data
-        states = np.array([x[0] for x in minibatch]) #  / 5 if not self.use_featured_states else np.array([x[0] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
+        states = np.array([x[0] for x in minibatch])
         actions = np.array([x[1] for x in minibatch])
         rewards = np.array([x[2] for x in minibatch])
-        next_states = np.array([x[3] for x in minibatch]) #  / 5 if not self.use_featured_states else np.array([x[3] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
+        next_states = np.array([x[3] for x in minibatch])
         dones = np.array([float(x[4]) for x in minibatch])
 
 
@@ -169,7 +166,7 @@ class DQNAgent:
         with open(f"{name}/config.json", "r") as f:
             config = json.load(f)
         agent = DQNAgent(config['rows'], config['cols'], config['state_size'], config['action_size'], 
-                         nn_type=config['nn_type'], is_training=is_training, use_featured_states=config['use_featured_states'])
+                         nn_type=config['nn_type'], is_training=is_training)
         agent.model.load_state_dict(torch.load(f"{name}/model.pt"))
         return agent
     
@@ -190,7 +187,6 @@ class DQNAgent:
                 "learning_rate": self.learning_rate,
                 "target_update_freq": self.target_update_freq,
                 "nn_type": self.nn_type,
-                "use_featured_states": self.use_featured_states,
             }, f)
 
 

@@ -62,8 +62,7 @@ class GameStarter:
 
                         food_game = FoodGame(rows = config["rows"], cols = config["cols"], 
                                              drl_model_path=self.food_game_play_config["model_path"], 
-                                             solo=self.food_game_play_config["solo"], 
-                                             use_featured_states=config["use_featured_states"])
+                                             solo=self.food_game_play_config["solo"])
 
                         food_game.run()
                     elif event.ui_element == self.food_game_back_button:
@@ -97,8 +96,6 @@ class GameStarter:
                         self.food_game_train_config["nn_type"] = event.text
                     elif event.ui_element == self.solo_drop_down_menu:
                         self.food_game_train_config["solo_training"] = True if event.text == "True" else False
-                    elif event.ui_element == self.use_featured_states_drop_down_menu:
-                        self.food_game_train_config["use_featured_states"] = True if event.text == "True" else False
             elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
 
                 # Food Game Play Config
@@ -381,17 +378,6 @@ class GameStarter:
                                                                     options_list=["True", "False"],
                                                                     starting_option="True")
         self.food_game_train_config["solo"] = True
-
-        # Uses featured states
-        self.use_featured_states_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,400), (150, 30)), 
-                                                            container=self.train_config_panel,
-                                                            text='Use Featured States', manager=self.manager)
-        self.use_featured_states_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((600, 400), (100, 30)),
-                                                                    container=self.train_config_panel,
-                                                                    manager=self.manager,
-                                                                    options_list=["True", "False"],
-                                                                    starting_option="False")
-        self.food_game_train_config["use_featured_states"] = False
 
 
         # Train button
