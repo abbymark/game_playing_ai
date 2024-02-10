@@ -23,7 +23,7 @@ class DQNAgent:
                  use_featured_states:bool=False) -> None:
         self.rows = rows
         self.cols = cols
-        self.state_size = state_size
+        self.state_size = state_size * 6  # 6 is the number of classes for the one-hot encoding
         self.action_size = action_size
         self.memory_size = memory_size
         self.memory = deque(maxlen=self.memory_size)
@@ -79,7 +79,11 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon and self.is_training:
             return random.randrange(self.action_size)
-        state = torch.FloatTensor(state).unsqueeze(0).to(device) / 5 if not self.use_featured_states else torch.FloatTensor(state).unsqueeze(0).to(device) / max(self.rows, self.cols)  # normalize state
+        state = torch.LongTensor(state).unsqueeze(0).to(device) # / 5 if not self.use_featured_states else torch.FloatTensor(state).unsqueeze(0).to(device) / max(self.rows, self.cols)  # normalize state
+        flat_next_states = state.view(state.shape[0], -1)
+        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
+        state = one_hot_flat_next_states.view(*state.shape, -1)
+        state = state.permute(0, 3, 1, 2).contiguous()
         act_values = self.model(state)
         return np.argmax(act_values.cpu().data.numpy())
 
@@ -91,20 +95,31 @@ class DQNAgent:
     
         minibatch = random.sample(self.memory, self.batch_size)
         # Convert list of numpy arrays to single numpy array for each type of data
-        states = np.array([x[0] for x in minibatch]) / 5 if not self.use_featured_states else np.array([x[0] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
+        states = np.array([x[0] for x in minibatch]) #  / 5 if not self.use_featured_states else np.array([x[0] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
         actions = np.array([x[1] for x in minibatch])
         rewards = np.array([x[2] for x in minibatch])
-        next_states = np.array([x[3] for x in minibatch]) / 5 if not self.use_featured_states else np.array([x[3] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
+        next_states = np.array([x[3] for x in minibatch]) #  / 5 if not self.use_featured_states else np.array([x[3] for x in minibatch]) / max(self.rows, self.cols)  # normalize state
         dones = np.array([float(x[4]) for x in minibatch])
 
 
         # Convert numpy arrays to PyTorch tensors
-        states = torch.FloatTensor(states).to(device)
+        states = torch.LongTensor(states).to(device)
+        flat_states = states.view(states.shape[0], -1)
+        one_hot_flat_states = nn.functional.one_hot(flat_states, num_classes=6).float()
+        states = one_hot_flat_states.view(*states.shape, -1)
+        states = states.permute(0, 3, 1, 2).contiguous()
+
         actions = torch.LongTensor(actions).view(-1, 1).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
-        next_states = torch.FloatTensor(next_states).to(device)
-        dones = torch.FloatTensor(dones).to(device)
 
+        next_states = torch.LongTensor(next_states).to(device)
+        flat_next_states = next_states.view(next_states.shape[0], -1)
+        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
+        next_states = one_hot_flat_next_states.view(*next_states.shape, -1)
+        next_states = next_states.permute(0, 3, 1, 2).contiguous()
+
+        dones = torch.FloatTensor(dones).to(device)
+        
         # Predict Q-values for starting states
         Q_values = self.model(states)
         action_Q_values = Q_values.gather(1, actions).squeeze()
@@ -134,6 +149,7 @@ class DQNAgent:
         # update target network
         if self.update_step % self.target_update_freq == 0:
             self.target_model.load_state_dict(self.model.state_dict())
+    
 
     def get_log(self) -> Dict[str, float]:
         log = {

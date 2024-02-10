@@ -189,8 +189,8 @@ class FoodGame:
         while self.running:
             self.time_delta = self.clock.tick(self.run_speed)/1000.0
             events = pygame.event.get()
-            state = np.reshape(self.map, (1, self.map.shape[0] * self.map.shape[1]))
-            action = self.drl_agent.act(state) if not self.use_featured_states else self.drl_agent.act(self._get_featured_obs())
+            # state = np.reshape(self.map, (1, self.map.shape[0] * self.map.shape[1]))
+            action = self.drl_agent.act(self.map) if not self.use_featured_states else self.drl_agent.act(self._get_featured_obs())
             self._update(events, action)
             self._events(events)
             self._draw()

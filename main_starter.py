@@ -415,8 +415,8 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     manager=self.manager,
                                                                     options_list=["True", "False"],
-                                                                    starting_option="True")
-        self.food_game_train_config["use_featured_states"] = True
+                                                                    starting_option="False")
+        self.food_game_train_config["use_featured_states"] = False
 
 
         # Train button
