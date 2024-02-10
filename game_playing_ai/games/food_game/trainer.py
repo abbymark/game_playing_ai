@@ -14,14 +14,13 @@ class Trainer:
         env = GridFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
                            config['food_count'], config['solo'])
         action_size = env.action_space.n
-        state_size = env.observation_space.shape[0] * env.observation_space.shape[1]
 
-        agent = DQNAgent(env.rows, env.cols, state_size, action_size, 
+        agent = DQNAgent(env.rows, env.cols, action_size, 
                          config['memory_size'], config['gamma'], 
                          config['epsilon_min'], config['epsilon_decay'], 
                         config['batch_size'], config['learning_rate'],  
                         config['target_update_freq'], config['nn_type'], 
-                        is_training=True)
+                        is_training=True, num_input_channels=6)
 
         # sorted_models = sorted(os.listdir("data/models"), reverse=True)
         # if len(sorted_models) > 0:

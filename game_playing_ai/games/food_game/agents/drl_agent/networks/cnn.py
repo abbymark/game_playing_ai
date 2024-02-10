@@ -1,11 +1,11 @@
 import torch
 
 class CNN(torch.nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_channels, output_dim):
         super().__init__()
-        self.input_dim = input_dim
+        self.input_channels = input_channels
         self.output_dim = output_dim
-        self.conv1 = torch.nn.Conv2d(in_channels=6, out_channels=16, kernel_size=3, stride=1, padding=1)
+        self.conv1 = torch.nn.Conv2d(in_channels=self.input_channels, out_channels=16, kernel_size=3, stride=1, padding=1)
         self.conv2 = torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.conv3 = torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
         

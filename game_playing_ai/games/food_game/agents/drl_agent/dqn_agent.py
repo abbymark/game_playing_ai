@@ -17,12 +17,13 @@ from typing import Dict
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DQNAgent:
-    def __init__(self, rows:int, cols:int, state_size:int, action_size:int, memory_size:int=10000, 
+    def __init__(self, rows:int, cols:int, action_size:int, memory_size:int=10000, 
                  gamma:float=0.95, epsilon_min:float=0.01, epsilon_decay:float=0.999999, batch_size:int=32,
-                 learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True) -> None:
+                 learning_rate:float=0.0001, target_update_freq:str=100, nn_type:str="DNN", is_training:bool=True,
+                 num_input_channels=6) -> None:
         self.rows = rows
         self.cols = cols
-        self.state_size = state_size * 6  # 6 is the number of classes for the one-hot encoding
+        self.state_size = rows * cols * num_input_channels
         self.action_size = action_size
         self.memory_size = memory_size
         self.memory = deque(maxlen=self.memory_size)
@@ -34,12 +35,14 @@ class DQNAgent:
         self.learning_rate = learning_rate
         self.target_update_freq = target_update_freq
         self.nn_type = nn_type
+        self.is_training = is_training
+        self.num_input_channels = num_input_channels
+
         self.model = self.get_model(self.nn_type)
         self.target_model = self.get_model(self.nn_type)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         # self.criterion = nn.MSELoss()
         self.criterion = nn.SmoothL1Loss()
-        self.is_training = is_training
         self.update_step = 0
 
         self.loss_sum = 0
@@ -61,6 +64,7 @@ class DQNAgent:
                     "learning_rate": self.learning_rate,
                     "target_update_freq": self.target_update_freq,
                     "nn_type": self.nn_type,
+                    "num_specifications": self.num_input_channels,
                 }
             )
 
@@ -68,7 +72,7 @@ class DQNAgent:
         if nn_type == 'DNN':
             return DNN(self.state_size, self.action_size).to(device)
         elif nn_type == 'CNN':
-            return CNN(self.state_size, self.action_size).to(device)
+            return CNN(self.num_input_channels, self.action_size).to(device)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -165,8 +169,8 @@ class DQNAgent:
     def load(name:str, is_training:bool):
         with open(f"{name}/config.json", "r") as f:
             config = json.load(f)
-        agent = DQNAgent(config['rows'], config['cols'], config['state_size'], config['action_size'], 
-                         nn_type=config['nn_type'], is_training=is_training)
+        agent = DQNAgent(config['rows'], config['cols'], config['action_size'], 
+                         nn_type=config['nn_type'], is_training=is_training, num_input_channels=config['num_specifications'])
         agent.model.load_state_dict(torch.load(f"{name}/model.pt"))
         return agent
     
@@ -187,6 +191,7 @@ class DQNAgent:
                 "learning_rate": self.learning_rate,
                 "target_update_freq": self.target_update_freq,
                 "nn_type": self.nn_type,
+                "num_specifications": self.num_input_channels,
             }, f)
 
 

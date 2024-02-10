@@ -17,13 +17,6 @@ import os
 from typing import Dict, List, Literal
 import json
 
-# Map specification
-# 0: Empty
-# 1: Wall
-# 2: Food
-# 3: Playable agent
-# 4: Preprogrammed agent
-# 5: DRL agent
 
 
 class FoodGame:
@@ -32,6 +25,17 @@ class FoodGame:
 
     GAME_WIDTH = 800
     GAME_HEIGHT = 600
+
+
+    NUM_SPECIFICATIONS = 6
+    # Map specification
+    # 0: Empty
+    # 1: Wall
+    # 2: Food
+    # 3: Playable agent
+    # 4: Preprogrammed agent
+    # 5: DRL agent
+
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
                  is_training:bool=False, solo:bool=False, drl_model_path:str=None):
