@@ -84,8 +84,8 @@ class GameStarter:
 
             elif event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
                 if self.page_state == "food_game_play_panel":
-                    if event.ui_element == self.solo_running_drop_down_menu:
-                        self.food_game_play_config["solo_running"] = True if event.text == "True" else False
+                    if event.ui_element == self.solo_drop_down_menu:
+                        self.food_game_play_config["solo"] = True if event.text == "True" else False
 
 
                 elif self.page_state == "food_game_train_panel":
@@ -105,10 +105,6 @@ class GameStarter:
                 if self.page_state == "food_game_play_panel":
                     if event.ui_element == self.model_path_text_entry:
                         self.food_game_play_config["model_path"] = event.text
-                    elif event.ui_element == self.rows_text_entry:
-                        self.food_game_play_config["rows"] = int(event.text) if event.text != "" else 0
-                    elif event.ui_element == self.cols_text_entry:
-                        self.food_game_play_config["cols"] = int(event.text) if event.text != "" else 0
 
                 # Food Game Train Config
                 elif self.page_state == "food_game_train_panel":
@@ -172,39 +168,18 @@ class GameStarter:
                                                             manager=self.manager)
         self.food_game_play_config["model_path"] = ""
 
-        # Rows
-        self.rows_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,100), (150, 30)), 
-                                                            container=self.food_game_play_panel,
-                                                            text='Rows', manager=self.manager)
-        
-        self.rows_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 100), (100, 30)), 
-                                                            container=self.food_game_play_panel,
-                                                            initial_text="30",
-                                                            manager=self.manager)
-        self.food_game_play_config["rows"] = 30
-
-        # Cols
-        self.cols_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,150), (150, 30)), 
-                                                            container=self.food_game_play_panel,
-                                                            text='Cols', manager=self.manager)
-        
-        self.cols_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, 150), (100, 30)), 
-                                                            container=self.food_game_play_panel,
-                                                            initial_text="40",
-                                                            manager=self.manager)
-        self.food_game_play_config["cols"] = 40
 
         # Solo runnning
-        self.solo_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,200), (150, 30)), 
+        self.solo_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((50,100), (150, 30)), 
                                                             container=self.food_game_play_panel,
                                                             text='Solo', manager=self.manager)
         
-        self.solo_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((200, 200), (100, 30)),
+        self.solo_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((200, 100), (100, 30)),
                                                                     container=self.food_game_play_panel,
                                                                     manager=self.manager,
                                                                     options_list=["True", "False"],
-                                                                    starting_option="True")
-        self.food_game_play_config["solo"] = True
+                                                                    starting_option="False")
+        self.food_game_play_config["solo"] = False
 
 
 
