@@ -6,7 +6,7 @@ import datetime
 
 import wandb
 
-class Trainer:
+class DQNTrainer:
     def __init__(self):
         pass
 
@@ -52,3 +52,7 @@ class Trainer:
                 wandb.log(log)
             if len(agent.memory) == config['memory_size']:
                 agent.update_epsilon()
+
+class PPOTrainer:
+    ...
+    

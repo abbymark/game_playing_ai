@@ -1,7 +1,8 @@
+from game_playing_ai.games.food_game.agents.drl_agent.DRLAgentSprite import DRLAgentSprite
 from game_playing_ai.games.food_game.game_items.environment import Environment
 from game_playing_ai.games.food_game.agents.preprogrammed_agent.agent import PreprogrammedAgent
 from game_playing_ai.games.food_game.agents.playable_agent.agent import PlayableAgent
-from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgentSprite, DQNAgent
+from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgent
 from game_playing_ai.games.food_game.game_items.food import Food
 
 import pygame
@@ -71,7 +72,7 @@ class FoodGame:
         if not is_training:
             self.drl_agent = self._load_drl_agent(drl_model_path)
             
-        self.drl_agent_sprite = DQNAgentSprite(rows, cols)
+        self.drl_agent_sprite = DRLAgentSprite(rows, cols)
         self.map = self.drl_agent_sprite.set_pos_in_map(self.map)
 
 

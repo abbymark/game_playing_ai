@@ -1,5 +1,5 @@
-from game_playing_ai.games.food_game.agents.drl_agent.networks.dnn import DNN
-from game_playing_ai.games.food_game.agents.drl_agent.networks.cnn import CNN
+from game_playing_ai.games.food_game.agents.drl_agent.networks.dqn_networks import DNN
+from game_playing_ai.games.food_game.agents.drl_agent.networks.dqn_networks import CNN
 
 import pygame
 import numpy as np
@@ -95,13 +95,13 @@ class DQNAgent:
             return
     
         minibatch = random.sample(self.memory, self.batch_size)
+        
         # Convert list of numpy arrays to single numpy array for each type of data
         states = np.array([x[0] for x in minibatch])
         actions = np.array([x[1] for x in minibatch])
         rewards = np.array([x[2] for x in minibatch])
         next_states = np.array([x[3] for x in minibatch])
         dones = np.array([float(x[4]) for x in minibatch])
-
 
         # Convert numpy arrays to PyTorch tensors
         states = torch.LongTensor(states).to(device)
@@ -132,7 +132,6 @@ class DQNAgent:
         # Compute the target Q values
         targets = rewards + (self.gamma * max_next_Q_values * (1 - dones))
 
-
         # Loss calculation
         loss = self.criterion(action_Q_values, targets)
 
@@ -142,10 +141,7 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
-        # self.update_epsilon()
-
-        self.loss_sum += loss.item()
-        
+        self.loss_sum += loss.item()        
 
         # update target network
         if self.update_step % self.target_update_freq == 0:
@@ -196,53 +192,3 @@ class DQNAgent:
 
 
 
-class DQNAgentSprite():
-    def __init__(self, rows, cols, pos = None):
-        self.rows = rows
-        self.cols = cols
-        self.food_collected = 0
-        if pos is None:
-            self.x = random.randint(0, cols - 1)
-            self.y = random.randint(0, rows - 1)
-        else:
-            self.x = pos[0]
-            self.y = pos[1]
-
-    def update(self, action):
-        if action is None:
-            return
-        new_x = self.x
-        new_y = self.y
-
-        if action == 0:
-            new_x -= 1
-        elif action == 1:
-            new_x += 1
-        elif action == 2:
-            new_y -= 1
-        elif action == 3:
-            new_y += 1
-
-        # Check if new position is within bounds
-        if 0 <= new_x < self.cols and 0 <= new_y < self.rows:
-            # Update position if within bounds
-            self.x = new_x
-            self.y = new_y
-        
-
-    
-    def set_pos_in_map(self, map):
-        while map[self.y][self.x] != 0 and map[self.y][self.x] != 3:
-            self.x = random.randint(0, self.cols - 1)
-            self.y = random.randint(0, self.rows - 1)
-        map[self.y][self.x] = 5
-        return map
-    
-    @property
-    def pos(self):
-        return (self.x, self.y)
-    
-    @pos.setter
-    def pos(self, pos):
-        self.x = pos[0]
-        self.y = pos[1]

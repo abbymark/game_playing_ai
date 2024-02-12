@@ -1,5 +1,5 @@
 from game_playing_ai.games.food_game.food_game import FoodGame
-from game_playing_ai.games.food_game.trainer import Trainer
+from game_playing_ai.games.food_game.agents.drl_agent.trainer import DQNTrainer
 
 import pygame
 import pygame_gui
@@ -72,7 +72,7 @@ class GameStarter:
 
                 if self.page_state == "food_game_train_panel":
                     if event.ui_element == self.train_button:
-                        trainer = Trainer()
+                        trainer = DQNTrainer()
                         trainer.train_drl_agent(self.food_game_train_config)
                     elif event.ui_element == self.back_button:
                         self.train_config_panel.hide()
@@ -310,8 +310,8 @@ class GameStarter:
                                                                     container=self.train_config_panel,
                                                                     manager=self.manager,
                                                                     options_list=["DNN", "CNN"],
-                                                                    starting_option="DNN")
-        self.food_game_train_config["nn_type"] = "DNN"
+                                                                    starting_option="CNN")
+        self.food_game_train_config["nn_type"] = "CNN"
 
 
         # map size: rows
