@@ -3,15 +3,15 @@ from game_playing_ai.games.food_game.agents.drl_agent.networks.dqn_networks impo
 
 import pygame
 import numpy as np
-import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from collections import deque
 import wandb
 
+from collections import deque
 import os
 import json
+import random
 from typing import Dict
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -52,6 +52,7 @@ class DQNAgent:
             wandb.init(
                 project="food_game",
                 config={
+                    "DRL_algorithm": "DQN",
                     "rows": self.rows,
                     "cols": self.cols,
                     "state_size": int(self.state_size),
