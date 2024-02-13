@@ -18,11 +18,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Memory:
     def __init__(self, gamma=0.99, lambda_gae=0.95):
-        self.actions = []
         self.states = []
+        self.actions = []
         self.log_probs = []
-        self.rewards = []
         self.values = []
+        self.rewards = []
         self.dones = []
 
         self.gamma = gamma
@@ -37,11 +37,11 @@ class Memory:
         self.dones.append(done)
 
     def clear_memory(self):
-        self.actions = []
         self.states = []
+        self.actions = []
         self.log_probs = []
-        self.rewards = []
         self.values = []
+        self.rewards = []
         self.dones = []
     
     def _get_advantages(self, rewards, dones, values):
@@ -61,7 +61,7 @@ class Memory:
         np.random.shuffle(indices)
         batches = [indices[i:i+batch_size] for i in batch_start]
 
-        return (np.array(self.states), np.array(self.actions), np.array(self.probs),
+        return (np.array(self.states), np.array(self.actions), np.array(self.log_probs),
                 np.array(self.values), np.array(self.rewards), np.array(self.dones),
                 np.array(advantages), batches)
 
@@ -76,7 +76,6 @@ class PPOAgent:
         self.state_size = rows * cols * num_input_channels
         self.action_size = action_size
         self.timestep_per_batch = timestep_per_batch
-        self.memory = deque(maxlen=self.memory_size)
         self.gamma = gamma  # discount rate
         self.lambda_gae = lambda_gae
         self.epsilon = epsilon
@@ -95,7 +94,7 @@ class PPOAgent:
         # self.criterion = nn.MSELoss()
         self.criterion = nn.SmoothL1Loss()
 
-        self.memory = Memory(self.gamma, self.lambda_gae)
+
         self.loss_sum = 0
 
         if is_training:
@@ -139,7 +138,11 @@ class PPOAgent:
         one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
         state = one_hot_flat_next_states.view(*state.shape, -1)
         state = state.permute(0, 3, 1, 2).contiguous()
-        return self.actor(state).sample().item()
+        prob = self.actor(state)
+        dist = Categorical(prob)
+        action = dist.sample()
+        value = self.critic(state)
+        return action.item(), dist.log_prob(action), value
     
     def get_log(self):
         return {
@@ -154,19 +157,9 @@ class PPOAgent:
         self.actor.load_state_dict(torch.load(f"{path}_actor.pth"))
         self.critic.load_state_dict(torch.load(f"{path}_critic.pth"))
 
-    def get_memory_sample(self):
-        len_states = len(self.memory)
-        start = np.arange(0, len_states, self.batch_size)
-        indexes = np.arange(len_states, dtype=np.int64)
-        np.random.shuffle(indexes)
-        batches = [indexes[i:i+self.batch_size] for i in start]
-
-        return
-
-
-    def replay(self):
+    def update(self, memory: Memory):
         for i in range(self.epochs):
-            states, actions, old_log_probs, values, rewards, dones, advantages, batches = self.memory.generate_batches(self.batch_size)
+            states, actions, old_log_probs, values, rewards, dones, advantages, batches = memory.generate_batches(self.batch_size)
             for batch in batches:
                 batch_states = states[batch]
                 batch_actions = actions[batch]
