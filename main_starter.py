@@ -1,5 +1,5 @@
 from game_playing_ai.games.food_game.food_game import FoodGame
-from game_playing_ai.games.food_game.agents.drl_agent.trainer import DQNTrainer
+from game_playing_ai.games.food_game.agents.drl_agent.trainer import DQNTrainer, PPOTrainer
 
 import pygame
 import pygame_gui
@@ -72,8 +72,12 @@ class GameStarter:
 
                 if self.page_state == "food_game_train_panel":
                     if event.ui_element == self.train_button:
-                        trainer = DQNTrainer()
-                        trainer.train_drl_agent(self.food_game_train_config)
+                        if self.food_game_train_config["algorithm"] == "DQN":
+                            trainer = DQNTrainer()
+                            trainer.train_drl_agent(self.food_game_train_config)
+                        elif self.food_game_train_config["algorithm"] == "PPO":
+                            trainer = PPOTrainer()
+                            trainer.train_drl_agent(self.food_game_train_config)
                     elif event.ui_element == self.back_button:
                         self.train_config_panel.hide()
                         self.main_menu_panel.show()
@@ -205,7 +209,7 @@ class GameStarter:
         self.algorithm_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((200, 50), (100, 30)),
                                                                     container=self.train_config_panel,
                                                                     manager=self.manager,
-                                                                    options_list=["DQN"],
+                                                                    options_list=["DQN", "PPO"],
                                                                     starting_option="DQN")
         self.food_game_train_config["algorithm"] = "DQN"
 
@@ -344,29 +348,25 @@ class GameStarter:
                                                                     manager=self.manager)
         self.food_game_train_config["food_count"] = 10
 
-        # Agent input colum size
-        self.agent_input_col_size_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,250), (150, 30)), 
+        # Epsilon
+        self.epsilon_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,250), (150, 30)), 
                                                             container=self.train_config_panel,
-                                                            text='Agent Input Col Size', manager=self.manager)
-        self.agent_input_col_size_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 250), (100, 30)),
+                                                            text='Epsilon', manager=self.manager)
+        self.epsilon_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 250), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="5",
+                                                                    initial_text="0.2",
                                                                     manager=self.manager)
-        self.food_game_train_config["agent_view_col_size"] = 5
-        self.agent_input_col_size_label.disable()
-        self.agent_input_col_size_text_entry.disable()
+        self.food_game_train_config["epsilon"] = 0.2
 
-        # Agent input row size
-        self.agent_input_row_size_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,300), (150, 30)), 
+        # Num_timesteps
+        self.num_timesteps_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,300), (150, 30)), 
                                                             container=self.train_config_panel,
-                                                            text='Agent Input Row Size', manager=self.manager)
-        self.agent_input_row_size_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 300), (100, 30)),
+                                                            text='Num Timesteps', manager=self.manager)
+        self.num_timesteps_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 300), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="5",
+                                                                    initial_text="1000",
                                                                     manager=self.manager)
-        self.food_game_train_config["agent_view_row_size"] = 5
-        self.agent_input_row_size_label.disable()
-        self.agent_input_row_size_text_entry.disable()
+        self.food_game_train_config["num_timesteps"] = 1000
 
         # Solo training
         self.solo_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,350), (150, 30)), 
@@ -378,6 +378,38 @@ class GameStarter:
                                                                     options_list=["True", "False"],
                                                                     starting_option="True")
         self.food_game_train_config["solo"] = True
+
+        # lambda_gae
+        self.lambda_gae_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,400), (150, 30)), 
+                                                            container=self.train_config_panel,
+                                                            text='Lambda GAE', manager=self.manager)
+        self.lambda_gae_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 400), (100, 30)),
+                                                                    container=self.train_config_panel,
+                                                                    initial_text="0.95",
+                                                                    manager=self.manager)
+        self.food_game_train_config["lambda_gae"] = 0.95
+
+        # Entropy Coef
+        self.entropy_coef_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,450), (150, 30)), 
+                                                            container=self.train_config_panel,
+                                                            text='Entropy Coef', manager=self.manager)
+        self.entropy_coef_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 450), (100, 30)),
+                                                                    container=self.train_config_panel,
+                                                                    initial_text="0.01",
+                                                                    manager=self.manager)
+        self.food_game_train_config["entropy_coef"] = 0.01
+
+        # Epochs
+        self.epochs_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,500), (150, 30)), 
+                                                            container=self.train_config_panel,
+                                                            text='Epochs', manager=self.manager)    
+        self.epochs_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 500), (100, 30)),
+                                                                    container=self.train_config_panel,
+                                                                    initial_text="5",
+                                                                    manager=self.manager)
+        self.food_game_train_config["epochs"] = 5
+
+
 
 
         # Train button

@@ -66,10 +66,11 @@ class PPOTrainer:
         action_size = env.action_space.n
                              
         agent = PPOAgent(env.rows, env.cols, action_size, 
-                         config['memory_size'], config['gamma'], 
+                         config['gamma'], config['lambda_gae'], 
                          config['epsilon'], config['batch_size'], 
                          config['learning_rate'], config['nn_type'], 
-                         is_training=True, num_input_channels=6)
+                         is_training=True, num_input_channels=6, 
+                         entropy_coef=config['entropy_coef'], epochs=config['epochs'])
         
         for e in range(config["episodes"]):
             state, info = env.reset()

@@ -47,10 +47,11 @@ class Memory:
     def _get_advantages(self, rewards, dones, values):
         gae = 0
         returns = []
-        for step in reversed(range(len(rewards))):
+        for step in reversed(range(len(rewards)-1)):
             delta = rewards[step] + self.gamma * values[step + 1] * (1 - dones[step]) - values[step]
             gae = delta + self.gamma * self.lambda_gae * (1 - dones[step]) * gae
             returns.insert(0, gae + values[step])
+        returns.append(0)
         return returns
     
     def generate_batches(self, batch_size):
@@ -67,15 +68,14 @@ class Memory:
 
 
 class PPOAgent:
-    def __init__(self, rows:int, cols:int, action_size:int, timestep_per_batch:int=1000, 
-                 gamma:float=0.95, lambda_gae:float=0.95, epsilon:float=0.2, batch_size:int=32,
+    def __init__(self, rows:int, cols:int, action_size:int, gamma:float=0.95, 
+                 lambda_gae:float=0.95, epsilon:float=0.2, batch_size:int=32,
                  learning_rate:float=0.0001, nn_type:str="CNN", is_training:bool=True,
                  num_input_channels=6, entropy_coef:float=0.01, epochs=5) -> None:
         self.rows = rows
         self.cols = cols
         self.state_size = rows * cols * num_input_channels
         self.action_size = action_size
-        self.timestep_per_batch = timestep_per_batch
         self.gamma = gamma  # discount rate
         self.lambda_gae = lambda_gae
         self.epsilon = epsilon
@@ -107,7 +107,6 @@ class PPOAgent:
                     "cols": self.cols,
                     "state_size": int(self.state_size),
                     "action_size": int(self.action_size),
-                    "memory_size": self.memory_size,
                     "gamma": self.gamma,
                     "epsilon": self.epsilon,
                     "batch_size": self.batch_size,
@@ -115,6 +114,8 @@ class PPOAgent:
                     "nn_type": self.nn_type,
                     "is_training": self.is_training,
                     "num_input_channels": self.num_input_channels,
+                    "entropy_coef": self.entropy_coef,
+                    "epochs": self.epochs,
                 }
             )
             wandb.watch(self.actor)
@@ -133,7 +134,7 @@ class PPOAgent:
             raise NotImplementedError
 
     def act(self, state):
-        state = torch.tensor(state, dtype=torch.float32).to(device)
+        state = torch.LongTensor(state).unsqueeze(0).to(device)
         flat_next_states = state.view(state.shape[0], -1)
         one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
         state = one_hot_flat_next_states.view(*state.shape, -1)
@@ -142,7 +143,7 @@ class PPOAgent:
         dist = Categorical(prob)
         action = dist.sample()
         value = self.critic(state)
-        return action.item(), dist.log_prob(action), value
+        return action.item(), dist.log_prob(action).item(), value.item()
     
     def get_log(self):
         return {
@@ -171,35 +172,36 @@ class PPOAgent:
 
                 # Convert numpy arrays to pytorch tensors
                 batch_states = torch.LongTensor(batch_states).to(device)
-                batch_flat_states = batch_states.view(states.shape[0], -1)
+                batch_flat_states = batch_states.view(batch_states.shape[0], -1)
                 batch_one_hot_flat_states = nn.functional.one_hot(batch_flat_states, num_classes=6).float()
-                batch_states = batch_one_hot_flat_states.view(*states.shape, -1)
+                batch_states = batch_one_hot_flat_states.view(*batch_states.shape, -1)
                 batch_states = batch_states.permute(0, 3, 1, 2).contiguous()
 
                 batch_actions = torch.LongTensor(batch_actions).view(-1, 1).to(device)
-                batch_old_probs = torch.FloatTensor(batch_old_probs).to(device)
+                batch_old_log_probs = torch.FloatTensor(batch_old_log_probs).to(device)
                 batch_values = torch.FloatTensor(batch_values).to(device)
                 batch_rewards = torch.FloatTensor(batch_rewards).to(device)
                 batch_dones = torch.FloatTensor(batch_dones).to(device)
+                batch_advantages = torch.FloatTensor(batch_advantages).to(device)
 
                 # Update the actor
-                probs = self.actor(states)
+                probs = self.actor(batch_states)
                 dist = Categorical(probs)
                 entropy_bonus = dist.entropy().mean()
-                current_log_probs = dist.log_prob(actions)
+                current_log_probs = dist.log_prob(batch_actions)
 
-                ratios = torch.exp(current_log_probs - old_log_probs)
+                ratios = torch.exp(current_log_probs - batch_old_log_probs)
 
-                surr1 = ratios * advantages
-                surr2 = torch.clamp(ratios, 1.0 - self.epsilon, 1.0 + self.epsilon) * advantages
+                surr1 = ratios * batch_advantages
+                surr2 = torch.clamp(ratios, 1.0 - self.epsilon, 1.0 + self.epsilon) * batch_advantages
                 actor_loss = -torch.min(surr1, surr2).mean()
 
                 # Update the critic
-                value_preds = self.critic(states)
-                critic_loss = self.criterion(value_preds, advantages + values)
+                value_preds = self.critic(batch_states).squeeze()
+                critic_loss = self.criterion(value_preds, batch_advantages + batch_values)
                 
 
-                loss = actor_loss + 0.5 * critic_loss - self.ent_coef * entropy_bonus
+                loss = actor_loss + 0.5 * critic_loss - self.entropy_coef * entropy_bonus
 
                 loss.backward()
                 self.actor_optimizer.zero_grad()
