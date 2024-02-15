@@ -45,14 +45,26 @@ class Memory:
         self.dones = []
     
     def _get_advantages(self, rewards, dones, values):
-        gae = 0
-        returns = []
-        for step in reversed(range(len(rewards)-1)):
-            delta = rewards[step] + self.gamma * values[step + 1] * (1 - dones[step]) - values[step]
-            gae = delta + self.gamma * self.lambda_gae * (1 - dones[step]) * gae
-            returns.insert(0, gae + values[step])
-        returns.append(0)
-        return returns
+        # gae = 0
+        # advantages = []
+        # for step in reversed(range(len(rewards)-1)):
+        #     delta = rewards[step] + self.gamma * values[step + 1] * (1 - dones[step]) - values[step]
+        #     gae = delta + self.gamma * self.lambda_gae * (1 - dones[step]) * gae
+        #     advantages.insert(0, gae + values[step])
+        # advantages.append(0)
+        # return advantages
+
+        advantages = np.zeros_like(rewards)
+        for t in range(len(rewards)-1):
+            discount = 1
+            a_t = 0
+            for k in range(t, len(rewards)-1):
+                a_t += discount * (rewards[k] + self.gamma * values[k+1] * (1-dones[k]) - values[k])
+                discount *= self.gamma * self.lambda_gae
+
+            advantages[t] = a_t
+        return advantages
+
     
     def generate_batches(self, batch_size):
         advantages = self._get_advantages(self.rewards, self.dones, self.values)
@@ -151,14 +163,15 @@ class PPOAgent:
         }
     
     def save(self, path:str):
-        torch.save(self.actor.state_dict(), f"{path}_actor.pth")
-        torch.save(self.critic.state_dict(), f"{path}_critic.pth")
+        torch.save(self.actor.state_dict(), f"{path}_actor.pt")
+        torch.save(self.critic.state_dict(), f"{path}_critic.pt")
 
     def load(self, path:str):
-        self.actor.load_state_dict(torch.load(f"{path}_actor.pth"))
-        self.critic.load_state_dict(torch.load(f"{path}_critic.pth"))
+        self.actor.load_state_dict(torch.load(f"{path}_actor.pt"))
+        self.critic.load_state_dict(torch.load(f"{path}_critic.pt"))
 
     def update(self, memory: Memory):
+        self.loss_sum = 0
         for i in range(self.epochs):
             states, actions, old_log_probs, values, rewards, dones, advantages, batches = memory.generate_batches(self.batch_size)
             for batch in batches:
@@ -198,14 +211,14 @@ class PPOAgent:
 
                 # Update the critic
                 value_preds = self.critic(batch_states).squeeze()
-                critic_loss = self.criterion(value_preds, batch_advantages + batch_values)
+                critic_loss = self.criterion(value_preds, batch_advantages + batch_values).mean()
                 
 
                 loss = actor_loss + 0.5 * critic_loss - self.entropy_coef * entropy_bonus
 
-                loss.backward()
                 self.actor_optimizer.zero_grad()
                 self.critic_optimizer.zero_grad()
+                loss.backward()
                 self.actor_optimizer.step()
                 self.critic_optimizer.step()
 
