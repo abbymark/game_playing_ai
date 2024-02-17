@@ -23,8 +23,8 @@ class GameStarter:
         self.running = True
 
         # pages
-        self.config_panel = FoodGameTrainPage(self.width, self.height)
-        self.config_panel.hide()
+        self.food_game_train_page = FoodGameTrainPage(self.width, self.height)
+        self.food_game_train_page.hide()
 
         self._main_menu_panel()
         
@@ -42,12 +42,12 @@ class GameStarter:
             self._draw()
     
     def _draw(self):
-        self.config_panel.draw(self.screen)
+        self.food_game_train_page.draw(self.screen)
         self.manager.draw_ui(self.screen)
         pygame.display.update()
 
     def _events(self, events):
-        self.config_panel.process_events(events)
+        self.food_game_train_page.process_events(events)
         for event in events:
             if event.type == pygame.QUIT:
                 self.running = False
@@ -61,7 +61,7 @@ class GameStarter:
                         self.page_state = "food_game_play_panel"
                     elif event.ui_element == self.food_game_train_button:
                         self.main_menu_panel.hide()
-                        self.config_panel.show()
+                        self.food_game_train_page.show()
                         self.page_state = "food_game_train_panel"
 
                 if self.page_state == "food_game_play_panel":
@@ -155,7 +155,7 @@ class GameStarter:
         
     
     def _update(self, events):
-        self.config_panel.update(self.time_delta)
+        self.food_game_train_page.update(self.time_delta)
         self.manager.update(self.time_delta)
 
 
