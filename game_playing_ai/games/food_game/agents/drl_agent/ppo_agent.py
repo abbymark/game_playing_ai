@@ -107,7 +107,11 @@ class PPOAgent:
         self.criterion = nn.SmoothL1Loss()
 
 
-        self.loss_sum = 0
+        self.total_loss_sum = 0
+        self.actor_loss_sum = 0
+        self.critic_loss_sum = 0
+        self.entropy_bonus_sum = 0
+        self.steps = 0
 
         if is_training:
             wandb.login()
@@ -159,7 +163,9 @@ class PPOAgent:
     
     def get_log(self):
         return {
-            "loss_sum": self.loss_sum,
+            "total_loss": self.total_loss_sum,
+            "actor_loss": self.actor_loss_sum,
+            "critic_loss": self.critic_loss_sum,
         }
     
     def save(self, path:str):
@@ -171,7 +177,11 @@ class PPOAgent:
         self.critic.load_state_dict(torch.load(f"{path}_critic.pt"))
 
     def update(self, memory: Memory):
-        self.loss_sum = 0
+        self.steps += 1
+        self.total_loss_sum = 0
+        self.actor_loss_sum = 0
+        self.critic_loss_sum = 0
+        self.entropy_bonus_sum = 0
         for i in range(self.epochs):
             states, actions, old_log_probs, values, rewards, dones, advantages, batches = memory.generate_batches(self.batch_size)
             for batch in batches:
@@ -182,7 +192,7 @@ class PPOAgent:
                 batch_rewards = rewards[batch]
                 batch_dones = dones[batch]
                 batch_advantages = advantages[batch]
-
+                
                 # Convert numpy arrays to pytorch tensors
                 batch_states = torch.LongTensor(batch_states).to(device)
                 batch_flat_states = batch_states.view(batch_states.shape[0], -1)
@@ -201,6 +211,7 @@ class PPOAgent:
                 probs = self.actor(batch_states)
                 dist = Categorical(probs)
                 entropy_bonus = dist.entropy().mean()
+
                 current_log_probs = dist.log_prob(batch_actions)
 
                 ratios = torch.exp(current_log_probs - batch_old_log_probs)
@@ -223,6 +234,14 @@ class PPOAgent:
                 self.critic_optimizer.step()
 
 
-                self.loss_sum += loss.item()
+                self.total_loss_sum += loss.item()
+                self.actor_loss_sum += actor_loss.item()
+                self.critic_loss_sum += critic_loss.item()
+                self.entropy_bonus_sum += entropy_bonus.item()
 
-    
+        wandb.log({
+            "total_loss": self.total_loss_sum,
+            "actor_loss": self.actor_loss_sum,
+            "critic_loss": self.critic_loss_sum,
+            "entropy_bonus": self.entropy_bonus_sum,
+        })

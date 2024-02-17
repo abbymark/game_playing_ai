@@ -131,10 +131,16 @@ class GameStarter:
                         self.food_game_train_config["map_size_cols"] = int(event.text) if event.text != "" else 0
                     elif event.ui_element == self.food_count_text_entry:
                         self.food_game_train_config["food_count"] = int(event.text) if event.text != "" else 0
-                    elif event.ui_element == self.agent_input_col_size_text_entry:
-                        self.food_game_train_config["agent_input_col_size"] = int(event.text) if event.text != "" else 0
-                    elif event.ui_element == self.agent_input_row_size_text_entry:
-                        self.food_game_train_config["agent_input_row_size"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.epsilon_text_entry:
+                        self.food_game_train_config["epsilon"] = float(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.num_timesteps_text_entry:
+                        self.food_game_train_config["num_timesteps"] = int(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.lambda_gae_text_entry:
+                        self.food_game_train_config["lambda_gae"] = float(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.entropy_coef_text_entry:
+                        self.food_game_train_config["entropy_coef"] = float(event.text) if event.text != "" else 0
+                    elif event.ui_element == self.epochs_text_entry:
+                        self.food_game_train_config["epochs"] = int(event.text) if event.text != "" else 0
 
 
             self.manager.process_events(event)
@@ -364,9 +370,9 @@ class GameStarter:
                                                             text='Num Timesteps', manager=self.manager)
         self.num_timesteps_text_entry = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((600, 300), (100, 30)),
                                                                     container=self.train_config_panel,
-                                                                    initial_text="1000",
+                                                                    initial_text="1280",
                                                                     manager=self.manager)
-        self.food_game_train_config["num_timesteps"] = 1000
+        self.food_game_train_config["num_timesteps"] = 1280
 
         # Solo training
         self.solo_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((450,350), (150, 30)), 
