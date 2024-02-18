@@ -1,23 +1,20 @@
 from game_playing_ai.games.food_game.food_game import FoodGame
 
-
-import gymnasium as gym
+from gymnasium.spaces import Box, Discrete
 import numpy as np
-from gymnasium import spaces
+from pettingzoo import ParallelEnv
 
-
-class SingleAgentFoodGame(gym.Env):
+class MultiAgentFoodGame(ParallelEnv):
     metadata = {'render_modes': ['human', 'rgb_array'], "render_fps": 5}
 
-    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo:bool):
+    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int):
         self.rows = rows
         self.cols = cols
         self.n_food = n_food
-        self.solo = solo
 
-        self.observation_space = spaces.Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
+        self.observation_space = Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
 
-        self.action_space = spaces.Discrete(4)
+        self.action_spaces = Discrete(4)
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
@@ -42,7 +39,7 @@ class SingleAgentFoodGame(gym.Env):
 
     def reset(self, seed=None):
         super().reset(seed=seed)
-        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo=self.solo)
+        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo=False)
 
         self._food_collected = 0
         self.prev__food_collected = 0
@@ -60,9 +57,8 @@ class SingleAgentFoodGame(gym.Env):
 
         return observation, info
 
-    def step(self, action):
-
-        self.render(action)
+    def step(self, actions):
+        self.game.update(actions)
         self._food_collected = self.game.drl_agent_sprite.food_collected
         self.playable_agent_food_collected = self.game.playable_agent.food_collected
         self.preprogrammed_agent_food_collected = self.game.preprogrammed_agent.food_collected
@@ -70,15 +66,15 @@ class SingleAgentFoodGame(gym.Env):
 
         reward = 0
         if self._food_collected > self.prev__food_collected:
-            reward += 1
+            reward += self._food_collected - self.prev__food_collected
         else:
             reward += -0.01
-
+        
         if self.playable_agent_food_collected > self.prev_playable_agent_food_collected:
-            reward += -0.1
-
+            reward -= self.playable_agent_food_collected - self.prev_playable_agent_food_collected
+        
         if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
-            reward += -0.1
+            reward -= self.preprogrammed_agent_food_collected - self.prev_preprogrammed_agent_food_collected
 
         observation = self.game.get_obs()
         info = self._get_info()
@@ -86,7 +82,7 @@ class SingleAgentFoodGame(gym.Env):
         self.prev__food_collected = self._food_collected
         self.prev_playable_agent_food_collected = self.playable_agent_food_collected
         self.prev_preprogrammed_agent_food_collected = self.preprogrammed_agent_food_collected
-        return observation, reward, terminated, False, info
-
+        return observation, reward, terminated, info
+    
     def render(self, action):
-        self.game.train(action)
+        self.game.render(action)
