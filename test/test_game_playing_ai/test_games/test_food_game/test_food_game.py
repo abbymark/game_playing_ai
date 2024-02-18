@@ -1,4 +1,5 @@
-from game_playing_ai.games.food_game.food_game import FoodGame, GridFoodGame, train_drl_agent
+from game_playing_ai.games.food_game.environments.single_agent_food_game import SingleAgentFoodGame
+from game_playing_ai.games.food_game.food_game import FoodGame, train_drl_agent
 
 class TestFoodGame:
     def test__init__game__human_render_mode(self):
@@ -76,7 +77,7 @@ class TestFoodGame:
 class TestGridFoodGame:
     @classmethod
     def setup_class(cls):
-        cls.game = GridFoodGame(rows=30, cols=40, n_food=10, render_mode='human', is_training=False, solo_training=False)
+        cls.game = SingleAgentFoodGame(rows=30, cols=40, n_food=10, render_mode='human', is_training=False, solo_training=False)
 
     def test__init__game__human_render_mode(self):
         ...
