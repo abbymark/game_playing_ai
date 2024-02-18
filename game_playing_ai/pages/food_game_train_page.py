@@ -4,10 +4,11 @@ import pygame
 import pygame_gui
 
 class FoodGameTrainPage:
-    def __init__(self, width, height):
-        self.manager = pygame_gui.UIManager((width, height), "theme.json")
+    def __init__(self, width, height, main_page):
         self.width = width
         self.height = height
+        self.manager = pygame_gui.UIManager((self.width, self.height), "theme.json")
+        self.main_page = main_page
         self.arguments_to_pass = {}
         self.make_page()
 
@@ -67,8 +68,7 @@ class FoodGameTrainPage:
                         trainer.train_drl_agent(self.arguments_to_pass)
                 elif event.ui_element == self.back_button:
                     self.train_config_panel.hide()
-                    self.main_menu_panel.show()
-                    self.page_state = "main_menu"
+                    self.main_page.show()
 
             self.manager.process_events(event)
     

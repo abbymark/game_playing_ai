@@ -8,8 +8,8 @@ class TestGameStarter:
         cls.game_starter = GameStarter()
 
     def test__main_menu_panel__contain_all_elements(self):
-        self.game_starter._main_menu_panel()
-        assert isinstance(self.game_starter.main_menu_panel, pygame_gui.elements.UIPanel)
+        self.game_starter.make_main_page()
+        assert isinstance(self.game_starter.main_page, pygame_gui.elements.UIPanel)
         assert isinstance(self.game_starter.game_title_label, pygame_gui.elements.UILabel)
         assert isinstance(self.game_starter.food_game_button, pygame_gui.elements.UIButton)
         assert isinstance(self.game_starter.food_game_train_button, pygame_gui.elements.UIButton)
