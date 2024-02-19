@@ -43,7 +43,7 @@ class PreprogrammedAgent:
         self.y = max(0, min(self.y, self.rows - 1))
     
     def set_pos_in_map(self, map):
-        while map[self.y][self.x] != 0 and map[self.y][self.x] != 4:
+        while map[self.y][self.x] != 0:
             self.x = random.randint(0, self.cols - 1)
             self.y = random.randint(0, self.rows - 1)
         map[self.y][self.x] = 4
