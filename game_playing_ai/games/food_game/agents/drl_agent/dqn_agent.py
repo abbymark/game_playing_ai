@@ -83,7 +83,7 @@ class DQNAgent:
             return random.randrange(self.action_size)
         state = torch.LongTensor(state).unsqueeze(0).to(device)
         flat_next_states = state.view(state.shape[0], -1)
-        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
+        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=7).float()
         state = one_hot_flat_next_states.view(*state.shape, -1)
         state = state.permute(0, 3, 1, 2).contiguous()
         act_values = self.model(state)
@@ -103,11 +103,11 @@ class DQNAgent:
         rewards = np.array([x[2] for x in minibatch])
         next_states = np.array([x[3] for x in minibatch])
         dones = np.array([float(x[4]) for x in minibatch])
-
+        
         # Convert numpy arrays to PyTorch tensors
         states = torch.LongTensor(states).to(device)
         flat_states = states.view(states.shape[0], -1)
-        one_hot_flat_states = nn.functional.one_hot(flat_states, num_classes=6).float()
+        one_hot_flat_states = nn.functional.one_hot(flat_states, num_classes=7).float()
         states = one_hot_flat_states.view(*states.shape, -1)
         states = states.permute(0, 3, 1, 2).contiguous()
 
@@ -116,12 +116,11 @@ class DQNAgent:
 
         next_states = torch.LongTensor(next_states).to(device)
         flat_next_states = next_states.view(next_states.shape[0], -1)
-        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
+        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=7).float()
         next_states = one_hot_flat_next_states.view(*next_states.shape, -1)
         next_states = next_states.permute(0, 3, 1, 2).contiguous()
 
         dones = torch.FloatTensor(dones).to(device)
-        
         # Predict Q-values for starting states
         Q_values = self.model(states)
         action_Q_values = Q_values.gather(1, actions).squeeze()
@@ -135,7 +134,6 @@ class DQNAgent:
 
         # Loss calculation
         loss = self.criterion(action_Q_values, targets)
-
 
         # Optimize the model
         self.optimizer.zero_grad()
@@ -189,7 +187,7 @@ class DQNAgent:
                 "target_update_freq": self.target_update_freq,
                 "nn_type": self.nn_type,
                 "num_specifications": self.num_input_channels,
-            }, f)
+            }, f, indent=4)
 
 
 

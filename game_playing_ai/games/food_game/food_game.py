@@ -34,9 +34,11 @@ class FoodGame:
     # 4: Preprogrammed agent
     # 5: DRL agent
 
+    # 6: Your agent location(required only when training)
+
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
-                 is_training:bool=False, solo:bool=False, drl_model_path:str=None):
+                 is_training:bool=False, solo:bool=False, num_drl_agents:int=2, num_preprogrammed_agents:int=2, drl_model_path:str=None):
         self.render_mode = render_mode
         self.solo = solo
         self.rows = rows
@@ -60,17 +62,23 @@ class FoodGame:
 
         self.map = np.zeros((rows, cols))
 
+        self.playable_agent_food_collected = 0
+        self.preprogrammed_agent_food_collected = 0
+        self.drl_agent_sprite_food_collected = 0
 
         # Agents
         self.playable_agent = PlayableAgent(rows, cols)
         self.map = self.playable_agent.set_pos_in_map(self.map)
-        self.preprogrammed_agent = PreprogrammedAgent(rows, cols)
-        self.map = self.preprogrammed_agent.set_pos_in_map(self.map)
+        self.preprogrammed_agents = [PreprogrammedAgent(rows, cols) for _ in range(num_preprogrammed_agents)]
+        for agent in self.preprogrammed_agents:
+            self.map = agent.set_pos_in_map(self.map)
+        
         if not is_training:
             self.drl_agent = self._load_drl_agent(drl_model_path)
-            
-        self.drl_agent_sprite = DRLAgentSprite(rows, cols)
-        self.map = self.drl_agent_sprite.set_pos_in_map(self.map)
+
+        self.drl_agent_sprites = [DRLAgentSprite(rows, cols) for _ in range(num_drl_agents)]
+        for agent in self.drl_agent_sprites:
+            self.map = agent.set_pos_in_map(self.map)
 
 
         # Food
@@ -82,6 +90,121 @@ class FoodGame:
         if drl_model_path is None:
             raise ValueError("drl_model_path is required")
         return DQNAgent.load(drl_model_path, is_training=False)
+
+
+    def run(self):
+        while self.running:
+            self.time_delta = self.clock.tick(self.run_speed)/1000.0
+            events = pygame.event.get()
+            # state = np.reshape(self.map, (1, self.map.shape[0] * self.map.shape[1]))
+
+            actions = []
+            for agent in self.drl_agent_sprites:
+                actions.append(self.drl_agent.act(agent.get_obs(self.map)))
+            
+            self._update(events, actions)
+            self._events(events)
+            self._draw()
+
+
+    def _events(self, events):
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.running = False
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
+                if event.ui_element == self.run_speed_slider:
+                    self.run_speed = int(event.value)
+            elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
+                pass
+
+        
+            self.manager.process_events(event)
+
+    def _update(self, events, actions):
+        prev_pos = self.playable_agent.pos
+        self.playable_agent.update(events)
+        if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [0, 2]:
+            self.map[prev_pos[1]][prev_pos[0]] = 0
+            self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = 3
+        else:
+            self.playable_agent.pos = prev_pos
+        
+        for agent in self.preprogrammed_agents:
+            prev_pos = agent.pos
+            if not self.solo:
+                agent.update(self.foods)
+            if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [0, 2]:
+                self.map[prev_pos[1]][prev_pos[0]] = 0
+                self.map[agent.pos[1]][agent.pos[0]] = 4
+            else:
+                agent.pos = prev_pos
+        
+        for agent, action in zip(self.drl_agent_sprites, actions):
+            prev_pos = agent.pos
+            agent.update(action)
+            if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [0, 2]:
+                self.map[prev_pos[1]][prev_pos[0]] = 0
+                self.map[agent.pos[1]][agent.pos[0]] = 5
+            else:
+                agent.pos = prev_pos
+
+
+        self._check_collisions()
+        if self.render_mode == "human":
+            self.manager.update(self.time_delta)
+
+    def _draw(self):
+        self.screen.fill((0, 0, 0))
+        self.environment.draw(self.map)
+        self.playable_agent_food_collected_value_label.set_text(str(self.playable_agent_food_collected))
+        self.preprogrammed_agent_food_collected_value_label.set_text(str(self.preprogrammed_agent_food_collected))
+        self.drl_agent_sprite_food_collected_value_label.set_text(str(self.drl_agent_sprite_food_collected))
+        self.screen.blit(self.canvas, self.canvas.get_rect())
+        self.manager.draw_ui(self.screen)
+        pygame.display.update()
+
+    def _check_collisions(self):
+        for food in self.foods:
+            if self.playable_agent.pos == food.pos:
+                self.playable_agent_food_collected += 1
+                self.foods.remove(food)
+                self.foods = Food.generate_foods(self.map, 1, self.foods)
+                self.map[self.foods[-1].y][self.foods[-1].x] = 2
+
+            for agent in self.preprogrammed_agents:
+                if agent.pos == food.pos:
+                    self.preprogrammed_agent_food_collected += 1
+                    self.foods.remove(food)
+                    self.foods = Food.generate_foods(self.map, 1, self.foods)
+                    self.map[self.foods[-1].y][self.foods[-1].x] = 2
+
+            for agent in self.drl_agent_sprites:
+                if agent.pos == food.pos:
+                    agent.increase_food_collected()
+                    self.drl_agent_sprite_food_collected += 1
+                    self.foods.remove(food)
+                    self.foods = Food.generate_foods(self.map, 1, self.foods)
+                    self.map[self.foods[-1].y][self.foods[-1].x] = 2
+
+ 
+    
+    def train(self, actions):
+        if self.render_mode == "human":
+            self.time_delta = self.clock.tick(self.run_speed)/1000.0
+            events = pygame.event.get()
+            self._update(events, actions)
+            self._events(events)
+            self._draw()
+        elif self.render_mode == "rgb_array":
+            self._update(None, actions)
+    
+    def get_obs(self) -> List[List[int]]:
+        return self.map.copy()
+    
+    def get_drl_agent_sprites(self):
+        return self.drl_agent_sprites
 
     def _setup_train_side_panel(self):
         self.manager = pygame_gui.UIManager((self.WIDTH, self.HEIGHT), "theme.json")
@@ -184,108 +307,6 @@ class FoodGame:
                                                                                         container=self.container, 
                                                                                         anchors={"centerx": "centerx"},
                                                                                         manager=self.manager, object_id="#side_panel_label", text="0")
-
-
-    def run(self):
-        while self.running:
-            self.time_delta = self.clock.tick(self.run_speed)/1000.0
-            events = pygame.event.get()
-            # state = np.reshape(self.map, (1, self.map.shape[0] * self.map.shape[1]))
-            action = self.drl_agent.act(self.map)
-            self._update(events, action)
-            self._events(events)
-            self._draw()
-
-
-    def _events(self, events):
-        for event in events:
-            if event.type == pygame.QUIT:
-                self.running = False
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
-                if event.ui_element == self.run_speed_slider:
-                    self.run_speed = int(event.value)
-            elif event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED:
-                pass
-
-        
-            self.manager.process_events(event)
-
-    def _update(self, events, action):
-        prev_pos = self.playable_agent.pos
-        self.playable_agent.update(events)
-        if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [0, 2]:
-            self.map[prev_pos[1]][prev_pos[0]] = 0
-            self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = 3
-        else:
-            self.playable_agent.pos = prev_pos
-        
-        prev_pos = self.preprogrammed_agent.pos
-        if not self.solo:
-            self.preprogrammed_agent.update(self.foods)
-        if prev_pos != self.preprogrammed_agent.pos and self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] in [0, 2]:
-            self.map[prev_pos[1]][prev_pos[0]] = 0
-            self.map[self.preprogrammed_agent.pos[1]][self.preprogrammed_agent.pos[0]] = 4
-        else:
-            self.preprogrammed_agent.pos = prev_pos
-        
-        prev_pos = self.drl_agent_sprite.pos
-        self.drl_agent_sprite.update(action)
-        if prev_pos != self.drl_agent_sprite.pos and self.map[self.drl_agent_sprite.pos[1]][self.drl_agent_sprite.pos[0]] in [0, 2]:
-            self.map[prev_pos[1]][prev_pos[0]] = 0
-            self.map[self.drl_agent_sprite.pos[1]][self.drl_agent_sprite.pos[0]] = 5
-        else:
-            self.drl_agent_sprite.pos = prev_pos
-
-
-        self._check_collisions()
-        if self.render_mode == "human":
-            self.manager.update(self.time_delta)
-
-    def _draw(self):
-        self.screen.fill((0, 0, 0))
-        self.environment.draw(self.map)
-        self.playable_agent_food_collected_value_label.set_text(str(self.playable_agent.food_collected))
-        self.preprogrammed_agent_food_collected_value_label.set_text(str(self.preprogrammed_agent.food_collected))
-        self.drl_agent_sprite_food_collected_value_label.set_text(str(self.drl_agent_sprite.food_collected))
-        self.screen.blit(self.canvas, self.canvas.get_rect())
-        self.manager.draw_ui(self.screen)
-        pygame.display.update()
-
-    def _check_collisions(self):
-        for food in self.foods:
-            if self.playable_agent.pos == food.pos:
-                self.playable_agent.food_collected += 1
-                self.foods.remove(food)
-                self.foods = Food.generate_foods(self.map, 1, self.foods)
-                self.map[self.foods[-1].y][self.foods[-1].x] = 2
-                break
-            elif self.preprogrammed_agent.pos == food.pos:
-                self.preprogrammed_agent.food_collected += 1
-                self.foods.remove(food)
-                self.foods = Food.generate_foods(self.map, 1, self.foods)
-                self.map[self.foods[-1].y][self.foods[-1].x] = 2
-                break
-            elif self.drl_agent_sprite.pos == food.pos:
-                self.drl_agent_sprite.food_collected += 1
-                self.foods.remove(food)
-                self.foods = Food.generate_foods(self.map, 1, self.foods)
-                self.map[self.foods[-1].y][self.foods[-1].x] = 2
-                break
-    
-    def train(self, action):
-        if self.render_mode == "human":
-            self.time_delta = self.clock.tick(self.run_speed)/1000.0
-            events = pygame.event.get()
-            self._update(events, action)
-            self._events(events)
-            self._draw()
-        elif self.render_mode == "rgb_array":
-            self._update(None, action)
-    
-    def get_obs(self) -> List[List[int]]:
-        return self.map.copy()
 
 
 

@@ -51,3 +51,13 @@ class DRLAgentSprite():
     def pos(self, pos):
         self.x = pos[0]
         self.y = pos[1]
+
+    def get_obs(self, map):
+        map[self.y][self.x] = 6
+        return map
+    
+    def increase_food_collected(self):
+        self.prev_food_collected = self.food_collected
+        self.food_collected += 1
+        return self.food_collected
+    

@@ -1,16 +1,21 @@
 from game_playing_ai.games.food_game.food_game import FoodGame
 
-from gymnasium.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete, MultiDiscrete
 import numpy as np
 from pettingzoo import ParallelEnv
+
+import functools
 
 class MultiAgentFoodGame(ParallelEnv):
     metadata = {'render_modes': ['human', 'rgb_array'], "render_fps": 5}
 
-    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int):
+    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo:bool, num_drl_agents:int, num_preprogrammed_agents:int):
         self.rows = rows
         self.cols = cols
         self.n_food = n_food
+        self.solo = solo
+        self.num_drl_agents = num_drl_agents
+        self.num_preprogrammed_agents = num_preprogrammed_agents
 
         self.observation_space = Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
 
@@ -31,18 +36,26 @@ class MultiAgentFoodGame(ParallelEnv):
         self.preprogrammed_agent_food_collected = 0
         self.prev_preprogrammed_agent_food_collected = 0
 
+    @functools.lru_cache(maxsize=None)
+    def observation_space(self, agent):
+        return MultiDiscrete([self.rows, self.cols, 6])
+    
+    @functools.lru_cache(maxsize=None)
+    def action_space(self, agent):
+        return Discrete(4)
 
     def _get_info(self):
-        return {
-            "agent_location": self.game.drl_agent_sprite.pos,
-        }
+        return {}
 
     def reset(self, seed=None):
-        super().reset(seed=seed)
-        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo=False)
+        self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo=self.solo,
+                             num_drl_agents=self.num_drl_agents, num_preprogrammed_agents=self.num_preprogrammed_agents)
 
         self._food_collected = 0
         self.prev__food_collected = 0
+
+        self._agent_food_collected = [0] * self.num_drl_agents
+        self.prev_agent_food_collected = [0] * self.num_drl_agents
 
         self.playable_agent_food_collected = 0
         self.prev_playable_agent_food_collected = 0
@@ -50,39 +63,56 @@ class MultiAgentFoodGame(ParallelEnv):
         self.preprogrammed_agent_food_collected = 0
         self.prev_preprogrammed_agent_food_collected = 0
 
-        self.render(None)
+        self.render([None] * self.num_drl_agents)
 
-        observation = self.game.get_obs()
+        self.drl_agent_sprites = self.game.get_drl_agent_sprites()
+        observations = []
+        for agent in self.drl_agent_sprites:
+            observations.append(agent.get_obs(self.game.get_obs()))
+
         info = self._get_info()
 
-        return observation, info
+        return observations
 
     def step(self, actions):
-        self.game.update(actions)
-        self._food_collected = self.game.drl_agent_sprite.food_collected
-        self.playable_agent_food_collected = self.game.playable_agent.food_collected
-        self.preprogrammed_agent_food_collected = self.game.preprogrammed_agent.food_collected
-        terminated = True if self._food_collected == self.n_food else False
-
-        reward = 0
-        if self._food_collected > self.prev__food_collected:
-            reward += self._food_collected - self.prev__food_collected
-        else:
-            reward += -0.01
+        self.render(actions)
+        rewards = []
+        terminations = []
+        self._food_collected = self.game.drl_agent_sprite_food_collected
+        self.playable_agent_food_collected = self.game.playable_agent_food_collected
+        self.preprogrammed_agent_food_collected = self.game.preprogrammed_agent_food_collected
+        terminated = True if self._food_collected > self.n_food else False
         
-        if self.playable_agent_food_collected > self.prev_playable_agent_food_collected:
-            reward -= self.playable_agent_food_collected - self.prev_playable_agent_food_collected
-        
-        if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
-            reward -= self.preprogrammed_agent_food_collected - self.prev_preprogrammed_agent_food_collected
+        self._agent_food_collected = [agent.food_collected for agent in self.drl_agent_sprites]
 
-        observation = self.game.get_obs()
+        for i, agent in enumerate(self.drl_agent_sprites):
+
+            reward = 0
+            reward += self._agent_food_collected[i] - self.prev_agent_food_collected[i]
+
+            if self._food_collected > self.prev__food_collected:
+                reward += self._food_collected - self.prev__food_collected
+            else:
+                reward += -0.01
+            
+            if self.playable_agent_food_collected > self.prev_playable_agent_food_collected:
+                reward -= self.playable_agent_food_collected - self.prev_playable_agent_food_collected
+            
+            if self.preprogrammed_agent_food_collected > self.prev_preprogrammed_agent_food_collected:
+                reward -= self.preprogrammed_agent_food_collected - self.prev_preprogrammed_agent_food_collected
+
+            rewards.append(reward)
+            terminations.append(terminated)
+        
+        observations = []
+        for agent in self.drl_agent_sprites:
+            observations.append(agent.get_obs(self.game.get_obs()))
         info = self._get_info()
-
         self.prev__food_collected = self._food_collected
+        self.prev_agent_food_collected = self._agent_food_collected[:]
         self.prev_playable_agent_food_collected = self.playable_agent_food_collected
         self.prev_preprogrammed_agent_food_collected = self.preprogrammed_agent_food_collected
-        return observation, reward, terminated, info
+        return observations, rewards, terminations, info
     
-    def render(self, action):
-        self.game.render(action)
+    def render(self, actions):
+        self.game.train(actions)
