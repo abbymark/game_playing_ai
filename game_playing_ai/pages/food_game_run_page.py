@@ -31,7 +31,8 @@ class FoodGameRunPage:
 
                     food_game = FoodGame(rows = config["rows"], cols = config["cols"], 
                                             drl_model_path=self.arguments_to_pass["model_path"], 
-                                            solo=self.arguments_to_pass["solo"])
+                                            solo=self.arguments_to_pass["solo"], num_drl_agents=config["num_drl_agents"],
+                                            num_preprogrammed_agents=config["num_preprogrammed_agents"])
 
                     food_game.run()
                 elif event.ui_element == self.food_game_back_button:

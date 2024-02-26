@@ -51,7 +51,10 @@ class DQNTrainer:
                 step_count += 1
 
             if len(agent.memory) == config["memory_size"]:
-                agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}")
+                agent.save({
+                    'num_drl_agents': config['num_drl_agents'],
+                    'num_preprogrammed_agents': config['num_preprogrammed_agents']
+                }, f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}")
                 log = agent.get_log()
                 log.update({
                     "step_count": step_count,

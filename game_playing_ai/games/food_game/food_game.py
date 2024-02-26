@@ -38,7 +38,7 @@ class FoodGame:
 
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
-                 is_training:bool=False, solo:bool=False, num_drl_agents:int=2, num_preprogrammed_agents:int=2, drl_model_path:str=None):
+                 is_training:bool=False, solo:bool=False, num_drl_agents:int=1, num_preprogrammed_agents:int=1, drl_model_path:str=None):
         self.render_mode = render_mode
         self.solo = solo
         self.rows = rows

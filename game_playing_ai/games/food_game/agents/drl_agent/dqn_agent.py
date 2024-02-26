@@ -169,25 +169,30 @@ class DQNAgent:
         agent.model.load_state_dict(torch.load(f"{name}/model.pt"))
         return agent
     
-    def save(self, name):
+    def save(self, additional_saving_parameters, name):
         os.makedirs(name, exist_ok=True)
         torch.save(self.model.state_dict(), f"{name}/model.pt")
+
+        save_parameters = {
+            "rows": self.rows,
+            "cols": self.cols,
+            "state_size": int(self.state_size),
+            "action_size": int(self.action_size),
+            "memory_size": self.memory_size,
+            "gamma": self.gamma,
+            "epsilon_min": self.epsilon_min,
+            "epsilon_decay": self.epsilon_decay,
+            "batch_size": self.batch_size,
+            "learning_rate": self.learning_rate,
+            "target_update_freq": self.target_update_freq,
+            "nn_type": self.nn_type,
+            "num_specifications": self.num_input_channels,
+        }
+
+        save_parameters.update(additional_saving_parameters)
+
         with open(f"{name}/config.json", "w") as f:
-            json.dump({
-                "rows": self.rows,
-                "cols": self.cols,
-                "state_size": int(self.state_size),
-                "action_size": int(self.action_size),
-                "memory_size": self.memory_size,
-                "gamma": self.gamma,
-                "epsilon_min": self.epsilon_min,
-                "epsilon_decay": self.epsilon_decay,
-                "batch_size": self.batch_size,
-                "learning_rate": self.learning_rate,
-                "target_update_freq": self.target_update_freq,
-                "nn_type": self.nn_type,
-                "num_specifications": self.num_input_channels,
-            }, f, indent=4)
+            json.dump(save_parameters, f, indent=4)
 
 
 
