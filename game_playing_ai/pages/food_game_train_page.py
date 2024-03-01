@@ -355,7 +355,25 @@ class FoodGameTrainPage:
                                                                     manager=self.manager)
         self.arguments_to_pass["num_preprogrammed_agents"] = 2
 
-
+        # obstacles
+        self.obstacles_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((525,250), (150, 30)), 
+                                                            container=self.train_config_panel,
+                                                            text='Obstacles', manager=self.manager)
+        self.obstacles_text_entry = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((675, 250), (100, 30)),
+                                                                    container=self.train_config_panel,
+                                                                    manager=self.manager,
+                                                                    options_list=["True", "False"],
+                                                                    starting_option="False")
+        
+        # Combat
+        self.combat_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((525,300), (150, 30)), 
+                                                            container=self.train_config_panel,
+                                                            text='Combat', manager=self.manager)
+        self.combat_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((675, 300), (100, 30)),
+                                                                    container=self.train_config_panel,
+                                                                    manager=self.manager,
+                                                                    options_list=["True", "False"],
+                                                                    starting_option="False")
 
 
 
