@@ -7,6 +7,8 @@ class PreprogrammedAgent:
         self.rows = rows
         self.cols = cols
         self.food_collected = 0
+        self.hp = 100
+
         if pos is None:
             self.x = random.randint(0, cols - 1)
             self.y = random.randint(0, rows - 1)

@@ -15,6 +15,7 @@ import random
 import datetime
 from typing import Dict, List, Literal
 import json
+from collections import deque
 
 
 
@@ -45,6 +46,9 @@ class FoodGame:
         self.solo = solo
         self.rows = rows
         self.cols = cols
+        self.combat = combat
+
+        self.respawn_queue = deque([False] * 100, maxlen=100)
 
         if self.render_mode == "human":
             pygame.init()
@@ -128,13 +132,14 @@ class FoodGame:
             self.manager.process_events(event)
 
     def _update(self, events, actions):
-        prev_pos = self.playable_agent.pos
-        self.playable_agent.update(events)
-        if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [0, 2]:
-            self.map[prev_pos[1]][prev_pos[0]] = 0
-            self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = 3
-        else:
-            self.playable_agent.pos = prev_pos
+        if self.playable_agent.is_alive:
+            prev_pos = self.playable_agent.pos
+            self.playable_agent.update(events)
+            if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [0, 2]:
+                self.map[prev_pos[1]][prev_pos[0]] = 0
+                self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = 3
+            else:
+                self.playable_agent.pos = prev_pos
         
         for agent in self.preprogrammed_agents:
             prev_pos = agent.pos
@@ -157,6 +162,11 @@ class FoodGame:
 
 
         self._check_collisions()
+        if self.combat:
+            self._check_enemies_nearby()
+            self._remove_dead_agents()
+            self._respawn_agents()
+
         if self.render_mode == "human":
             self.manager.update(self.time_delta)
 
@@ -172,7 +182,7 @@ class FoodGame:
 
     def _check_collisions(self):
         for food in self.foods:
-            if self.playable_agent.pos == food.pos:
+            if self.playable_agent.is_alive and self.playable_agent.pos == food.pos:
                 self.playable_agent_food_collected += 1
                 self.foods.remove(food)
                 self.foods = Food.generate_foods(self.map, 1, self.foods)
@@ -192,8 +202,77 @@ class FoodGame:
                     self.foods.remove(food)
                     self.foods = Food.generate_foods(self.map, 1, self.foods)
                     self.map[self.foods[-1].y][self.foods[-1].x] = 2
+    
+    def _check_enemies_nearby(self):
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        for drl_agent in self.drl_agent_sprites:
+            for x, y in directions:
+                if drl_agent.y + y >= 0 and drl_agent.y + y < self.rows and \
+                drl_agent.x + x >= 0 and drl_agent.x + x < self.cols and \
+                self.map[drl_agent.y + y][drl_agent.x + x] in [3, 4]:
+                    drl_agent.hp -= 10
+            if drl_agent.hp < 100:
+                drl_agent.hp += 1
+        
+        for preprog_agent in self.preprogrammed_agents:
+            for x, y in directions:
+                if preprog_agent.y + y >= 0 and preprog_agent.y + y < self.rows and \
+                preprog_agent.x + x >= 0 and preprog_agent.x + x < self.cols and \
+                self.map[preprog_agent.y + y][preprog_agent.x + x] in [3, 5]:
+                    preprog_agent.hp -= 10
+            if preprog_agent.hp < 100:
+                preprog_agent.hp += 1
+        
+        if self.playable_agent.is_alive:
+            for x, y in directions:
+                if self.playable_agent.y + y >= 0 and self.playable_agent.y + y < self.rows and \
+                self.playable_agent.x + x >= 0 and self.playable_agent.x + x < self.cols and \
+                self.map[self.playable_agent.y + y][self.playable_agent.x + x] in [4, 5]:
+                    self.playable_agent.hp -= 10
+            if self.playable_agent.hp < 100:
+                self.playable_agent.hp += 1
+            print(self.playable_agent.hp)
 
- 
+    def _remove_dead_agents(self):
+        survived_drl_agents = []
+        for agent in self.drl_agent_sprites:
+            if agent.hp > 0:
+                survived_drl_agents.append(agent)
+            else:
+                self.respawn_queue.append('drl_agent')
+                self.map[agent.y][agent.x] = 0
+        self.drl_agent_sprites = survived_drl_agents
+
+        survived_preprog_agents = []
+        for agent in self.preprogrammed_agents:
+            if agent.hp > 0:
+                survived_preprog_agents.append(agent)
+            else:
+                self.respawn_queue.append('preprogrammed_agent')
+                self.map[agent.y][agent.x] = 0
+        self.preprogrammed_agents = survived_preprog_agents
+
+        if self.playable_agent.hp <= 0 and self.playable_agent.is_alive:
+            self.playable_agent.is_alive = False
+            self.respawn_queue.append('playable_agent')
+            self.map[self.playable_agent.y][self.playable_agent.x] = 0
+        
+        
+    
+    def _respawn_agents(self):
+        respawn_agent = self.respawn_queue.popleft()
+        if respawn_agent == 'drl_agent':
+            self.drl_agent_sprites.append(DRLAgentSprite(self.rows, self.cols))
+            self.map = self.drl_agent_sprites[-1].set_pos_in_map(self.map)
+        elif respawn_agent == 'preprogrammed_agent':
+            self.preprogrammed_agents.append(PreprogrammedAgent(self.rows, self.cols))
+            self.map = self.preprogrammed_agents[-1].set_pos_in_map(self.map)
+        elif respawn_agent == 'playable_agent':
+            self.playable_agent = PlayableAgent(self.rows, self.cols)
+            self.map = self.playable_agent.set_pos_in_map(self.map)
+            self.playable_agent.is_alive = True
+            self.playable_agent.hp = 100
+        self.respawn_queue.append(False)
     
     def train(self, actions):
         if self.render_mode == "human":
