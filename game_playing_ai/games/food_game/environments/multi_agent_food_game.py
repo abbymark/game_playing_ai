@@ -9,13 +9,17 @@ import functools
 class MultiAgentFoodGame(ParallelEnv):
     metadata = {'render_modes': ['human', 'rgb_array'], "render_fps": 5}
 
-    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, solo:bool, num_drl_agents:int, num_preprogrammed_agents:int):
+    def __init__(self, render_mode:str, rows:int, cols:int, n_food:int, 
+                 solo:bool, num_drl_agents:int, num_preprogrammed_agents:int,
+                 obstacles:bool, combat:bool):
         self.rows = rows
         self.cols = cols
         self.n_food = n_food
         self.solo = solo
         self.num_drl_agents = num_drl_agents
         self.num_preprogrammed_agents = num_preprogrammed_agents
+        self.obstacles = obstacles
+        self.combat = combat
 
         self.observation_space = Box(low=0, high=5, shape=(self.rows, self.cols), dtype=np.int8)
 
@@ -49,7 +53,8 @@ class MultiAgentFoodGame(ParallelEnv):
 
     def reset(self, seed=None):
         self.game = FoodGame(self.rows, self.cols, self.n_food, self.render_mode, is_training=True, solo=self.solo,
-                             num_drl_agents=self.num_drl_agents, num_preprogrammed_agents=self.num_preprogrammed_agents)
+                             num_drl_agents=self.num_drl_agents, num_preprogrammed_agents=self.num_preprogrammed_agents,
+                             obstacles=self.obstacles, combat=self.combat)
 
         self._food_collected = 0
         self.prev__food_collected = 0

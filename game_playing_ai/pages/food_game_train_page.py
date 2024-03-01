@@ -60,9 +60,13 @@ class FoodGameTrainPage:
                 elif event.ui_element == self.nn_type_drop_down_menu:
                     self.arguments_to_pass["nn_type"] = event.text
                 elif event.ui_element == self.solo_drop_down_menu:
-                    self.arguments_to_pass["solo_training"] = True if event.text == "True" else False
+                    self.arguments_to_pass["solo"] = True if event.text == "True" else False
                 elif event.ui_element == self.multi_agent_drop_down_menu:
                     self.arguments_to_pass["multi_agent"] = True if event.text == "True" else False
+                elif event.ui_element == self.combat_drop_down_menu:
+                    self.arguments_to_pass["combat"] = True if event.text == "True" else False
+                elif event.ui_element == self.obstacles_drop_down_menu:
+                    self.arguments_to_pass["obstacles"] = True if event.text == "True" else False
                 elif event.ui_element == self.combat_drop_down_menu:
                     self.arguments_to_pass["combat"] = True if event.text == "True" else False
 
@@ -359,11 +363,12 @@ class FoodGameTrainPage:
         self.obstacles_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((525,250), (150, 30)), 
                                                             container=self.train_config_panel,
                                                             text='Obstacles', manager=self.manager)
-        self.obstacles_text_entry = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((675, 250), (100, 30)),
+        self.obstacles_drop_down_menu = pygame_gui.elements.UIDropDownMenu(relative_rect=pygame.Rect((675, 250), (100, 30)),
                                                                     container=self.train_config_panel,
                                                                     manager=self.manager,
                                                                     options_list=["True", "False"],
                                                                     starting_option="False")
+        self.arguments_to_pass["obstacles"] = False
         
         # Combat
         self.combat_label = pygame_gui.elements.UILabel(relative_rect=pygame.Rect((525,300), (150, 30)), 
@@ -374,6 +379,7 @@ class FoodGameTrainPage:
                                                                     manager=self.manager,
                                                                     options_list=["True", "False"],
                                                                     starting_option="False")
+        self.arguments_to_pass["combat"] = False
 
 
 

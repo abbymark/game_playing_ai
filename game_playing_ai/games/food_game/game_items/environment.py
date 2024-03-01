@@ -21,6 +21,10 @@ class Environment:
         self.empty.fill(self.colors["black"])
         self.empty_rect = self.empty.get_rect()
 
+        self.obstacle = pygame.Surface((self.cell_width, self.cell_height))
+        self.obstacle.fill(self.colors["white"])
+        self.obstacle_rect = self.obstacle.get_rect()
+
         self.food = pygame.Surface((self.cell_width, self.cell_height))
         self.food.fill(self.colors["green"])
         self.food_rect = self.food.get_rect()
@@ -51,7 +55,10 @@ class Environment:
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.empty, self.rect)
                 elif map[i][j] == 1:
-                    pass
+                    self.rect = self.obstacle_rect
+                    self.rect.x = j * self.cell_width
+                    self.rect.y = i * self.cell_height
+                    self.screen.blit(self.obstacle, self.rect)
                 elif map[i][j] == 2:
                     self.rect = self.food_rect
                     self.rect.x = j * self.cell_width

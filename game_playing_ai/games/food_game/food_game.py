@@ -4,6 +4,7 @@ from game_playing_ai.games.food_game.agents.preprogrammed_agent.agent import Pre
 from game_playing_ai.games.food_game.agents.playable_agent.agent import PlayableAgent
 from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgent
 from game_playing_ai.games.food_game.game_items.food import Food
+from game_playing_ai.games.food_game.game_items.obstacle import place_obstacles
 
 import pygame
 import pygame_gui
@@ -38,7 +39,8 @@ class FoodGame:
 
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
-                 is_training:bool=False, solo:bool=False, num_drl_agents:int=1, num_preprogrammed_agents:int=1, drl_model_path:str=None):
+                 is_training:bool=False, solo:bool=False, num_drl_agents:int=1, num_preprogrammed_agents:int=1, drl_model_path:str=None,
+                 obstacles:bool=False, combat:bool=False):
         self.render_mode = render_mode
         self.solo = solo
         self.rows = rows
@@ -61,6 +63,9 @@ class FoodGame:
             self.environment = Environment(self.canvas, rows, cols)
 
         self.map = np.zeros((rows, cols))
+
+        if obstacles:
+            self.map = place_obstacles(self.map, rows*cols//10)
 
         self.playable_agent_food_collected = 0
         self.preprogrammed_agent_food_collected = 0
