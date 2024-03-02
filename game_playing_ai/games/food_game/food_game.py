@@ -107,11 +107,15 @@ class FoodGame:
             events = pygame.event.get()
             # state = np.reshape(self.map, (1, self.map.shape[0] * self.map.shape[1]))
 
-            actions = []
+            drl_actions = []
             for agent in self.drl_agent_sprites:
-                actions.append(self.drl_agent.act(agent.get_obs(self.map)))
+                drl_actions.append(self.drl_agent.act(agent.get_obs(self.map)))
             
-            self._update(events, actions)
+            preprogrammed_actions = []
+            for agent in self.preprogrammed_agents:
+                preprogrammed_actions.append(agent.act(agent.get_obs(self.map), self.foods))
+            
+            self._update(events, drl_actions, preprogrammed_actions)
             self._events(events)
             self._draw()
 
@@ -131,7 +135,7 @@ class FoodGame:
         
             self.manager.process_events(event)
 
-    def _update(self, events, actions):
+    def _update(self, events, drl_actions, preprogrammed_actions):
         if self.playable_agent.is_alive:
             prev_pos = self.playable_agent.pos
             self.playable_agent.update(events)
@@ -141,17 +145,17 @@ class FoodGame:
             else:
                 self.playable_agent.pos = prev_pos
         
-        for agent in self.preprogrammed_agents:
+        for agent, action in zip(self.preprogrammed_agents, preprogrammed_actions):
             prev_pos = agent.pos
             if not self.solo:
-                agent.update(self.foods)
+                agent.update(action)
             if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [0, 2]:
                 self.map[prev_pos[1]][prev_pos[0]] = 0
                 self.map[agent.pos[1]][agent.pos[0]] = 4
             else:
                 agent.pos = prev_pos
         
-        for agent, action in zip(self.drl_agent_sprites, actions):
+        for agent, action in zip(self.drl_agent_sprites, drl_actions):
             prev_pos = agent.pos
             agent.update(action)
             if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [0, 2]:
@@ -274,15 +278,18 @@ class FoodGame:
             self.playable_agent.hp = 100
         self.respawn_queue.append(False)
     
-    def train(self, actions):
+    def train(self, drl_actions):
+        preprogrammed_actions = []
+        for agent in self.preprogrammed_agents:
+            preprogrammed_actions.append(agent.act(agent.get_obs(self.map), self.foods))
         if self.render_mode == "human":
             self.time_delta = self.clock.tick(self.run_speed)/1000.0
             events = pygame.event.get()
-            self._update(events, actions)
+            self._update(events, drl_actions, preprogrammed_actions)
             self._events(events)
             self._draw()
         elif self.render_mode == "rgb_array":
-            self._update(None, actions)
+            self._update(None, drl_actions, preprogrammed_actions)
     
     def get_obs(self) -> List[List[int]]:
         return self.map.copy()
