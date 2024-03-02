@@ -58,8 +58,7 @@ class PreprogrammedAgent:
         if self.hp < 20:
             return self.evade(map)
         else:
-            x, y = self.get_closest_food_position(foods)
-            return self.seek(map, x, y)
+            return self.seek(map, foods)
 
     def evade(self, map):
         # check if enemy is nearby
@@ -74,7 +73,23 @@ class PreprogrammedAgent:
             return random.choice([0, 1, 2, 3])
         return random.choice(possible_actions)
     
-    def seek(self,map, x, y):
+    def seek(self, map, foods):
+    
+        def get_closest_food_position(foods, n_th_closest):
+            # Create a KDTree for the food
+            food_positions = [(food.x, food.y) for food in foods]
+            food_tree = KDTree(food_positions)
+
+            # Get the closest food
+            distance, indices = food_tree.query([self.x, self.y], k = 10)  # 10 is to get the 10 closest food(when food count is 10)
+            
+            closest_food = foods[indices[n_th_closest]]
+
+            # Get the position of the closest food
+            food_x = closest_food.x
+            food_y = closest_food.y
+            return (food_x, food_y)
+
         def heuristic(start, goal):
             return abs(start[0] - goal[0]) + abs(start[1] - goal[1])
         
@@ -104,7 +119,7 @@ class PreprogrammedAgent:
                     neighbor = current[0] + i, current[1] + j
                     tentative_g_score = gscore[current] + 1
 
-                    if 0 <= neighbor[0] < len(map) and 0 <= neighbor[1] < len(map[0]) and map[neighbor[0]][neighbor[1]] == 0:
+                    if 0 <= neighbor[0] < len(map[0]) and 0 <= neighbor[1] < len(map) and map[neighbor[1]][neighbor[0]] in [0, 2]:
                         if neighbor not in close_set and (neighbor not in gscore or tentative_g_score < gscore[neighbor]):
                             came_from[neighbor] = current
                             gscore[neighbor] = tentative_g_score
@@ -112,28 +127,18 @@ class PreprogrammedAgent:
                             if neighbor not in [i[1] for i in oheap]:
                                 heapq.heappush(oheap, (fscore[neighbor], neighbor))
 
+        for i in range(10):  # 11 is to get the 10th closest food(when food count is 10)
+            x, y = get_closest_food_position(foods, i)
+            path = a_star_search(map, (self.x, self.y), (x, y))
+            if path:
+                path = path[::-1]
+                return self.action_from_direction[(path[0][0] - self.x, path[0][1] - self.y)]
 
-        path = a_star_search(map, (self.x, self.y), (x, y))
-        if path:
-            path = path[::-1]
-            return self.action_from_direction[(path[0][0] - self.x, path[0][1] - self.y)]
-        else:
-            return random.choice([0, 1, 2, 3])
+        breakpoint()
+        return random.choice([0, 1, 2, 3])
 
 
 
-    def get_closest_food_position(self, food):
-        # Create a KDTree for the food
-        food_positions = [(food.x, food.y) for food in food]
-        food_tree = KDTree(food_positions)
-
-        # Get the closest food
-        closest_food = food[food_tree.query([self.x, self.y])[1]]
-
-        # Get the position of the closest food
-        food_x = closest_food.x
-        food_y = closest_food.y
-        return (food_x, food_y)
 
 
     
@@ -154,5 +159,6 @@ class PreprogrammedAgent:
         self.y = pos[1]
     
     def get_obs(self, map):
+        map = map.copy()
         map[self.y][self.x] = 6
         return map

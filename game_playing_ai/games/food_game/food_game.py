@@ -235,7 +235,6 @@ class FoodGame:
                     self.playable_agent.hp -= 10
             if self.playable_agent.hp < 100:
                 self.playable_agent.hp += 1
-            print(self.playable_agent.hp)
 
     def _remove_dead_agents(self):
         survived_drl_agents = []

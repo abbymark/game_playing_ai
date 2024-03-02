@@ -54,6 +54,7 @@ class DRLAgentSprite():
         self.y = pos[1]
 
     def get_obs(self, map):
+        map = map.copy()
         map[self.y][self.x] = 6
         return map
     
