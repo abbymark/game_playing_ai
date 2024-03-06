@@ -1,4 +1,4 @@
-from game_playing_ai.games.food_game.TileType import TileType
+from game_playing_ai.games.food_game.tile_type import TileType
 
 import random
 

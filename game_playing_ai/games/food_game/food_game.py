@@ -1,4 +1,4 @@
-from game_playing_ai.games.food_game.TileType import TileType
+from game_playing_ai.games.food_game.tile_type import TileType
 from game_playing_ai.games.food_game.agents.drl_agent.DRLAgentSprite import DRLAgentSprite
 from game_playing_ai.games.food_game.game_items.environment import Environment
 from game_playing_ai.games.food_game.agents.preprogrammed_agent.agent import PreprogrammedAgent

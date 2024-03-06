@@ -1,5 +1,5 @@
 from game_playing_ai.games.food_game.environments.single_agent_food_game import SingleAgentFoodGame
-from game_playing_ai.games.food_game.food_game import FoodGame, train_drl_agent
+# from game_playing_ai.games.food_game.food_game import FoodGame, train_drl_agent
 
 class TestFoodGame:
     def test__init__game__human_render_mode(self):
