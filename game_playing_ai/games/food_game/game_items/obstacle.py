@@ -1,3 +1,5 @@
+from game_playing_ai.games.food_game.food_game import TileType
+
 import random
 
 def place_obstacles(grid, obstacle_count):
@@ -11,7 +13,7 @@ def place_obstacles(grid, obstacle_count):
 
         # Check if current spot is empty and not surrounded
         if grid[row][col] == 0 and not is_surrounded(grid, row, col):
-            grid[row][col] = 1  # Place obstacle
+            grid[row][col] = TileType.OBSTACLE
             placed_obstacles += 1
             
             # Ensure surrounding cells are not made inaccessible
@@ -28,7 +30,7 @@ def is_surrounded(grid, row, col):
     for dr, dc in directions:
         r, c = row + dr, col + dc
         if 0 <= r < len(grid) and 0 <= c < len(grid[0]):
-            if grid[r][c] == 0:  # If there's an empty space
+            if grid[r][c] == TileType.EMPTY:
                 return False
     return True
 

@@ -18,6 +18,20 @@ import json
 from collections import deque
 
 
+class TileType:
+    EMPTY = 0
+    OBSTACLE = 1
+    FOOD = 2
+    PLAYABLE_AGENT = 3
+    PREPROGRAMMED_AGENT = 4
+    DRL_AGENT = 5
+    AGENT_LOCATION = 6
+
+    @classmethod
+    def __len__(cls):
+        return len([attr for attr in dir(cls) if not attr.startswith('_') and not callable(getattr(cls, attr))])
+
+
 
 class FoodGame:
     WIDTH = 1200
@@ -26,17 +40,6 @@ class FoodGame:
     GAME_WIDTH = 800
     GAME_HEIGHT = 600
 
-
-    NUM_SPECIFICATIONS = 6
-    # Map specification
-    # 0: Empty
-    # 1: Wall
-    # 2: Food
-    # 3: Playable agent
-    # 4: Preprogrammed agent
-    # 5: DRL agent
-
-    # 6: Your agent location(required only when training)
 
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
@@ -93,7 +96,7 @@ class FoodGame:
         # Food
         self.foods = Food.generate_foods(self.map, n_food)
         for food in self.foods:
-            self.map[food.y][food.x] = 2
+            self.map[food.y][food.x] = TileType.FOOD
     
     def _load_drl_agent(self, drl_model_path:str):
         if drl_model_path is None:
@@ -139,9 +142,9 @@ class FoodGame:
         if self.playable_agent.is_alive:
             prev_pos = self.playable_agent.pos
             self.playable_agent.update(events)
-            if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [0, 2]:
-                self.map[prev_pos[1]][prev_pos[0]] = 0
-                self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = 3
+            if prev_pos != self.playable_agent.pos and self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] in [TileType.EMPTY, TileType.FOOD]:
+                self.map[prev_pos[1]][prev_pos[0]] = TileType.EMPTY
+                self.map[self.playable_agent.pos[1]][self.playable_agent.pos[0]] = TileType.PLAYABLE_AGENT
             else:
                 self.playable_agent.pos = prev_pos
         
@@ -149,18 +152,18 @@ class FoodGame:
             prev_pos = agent.pos
             if not self.solo:
                 agent.update(action)
-            if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [0, 2]:
-                self.map[prev_pos[1]][prev_pos[0]] = 0
-                self.map[agent.pos[1]][agent.pos[0]] = 4
+            if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [TileType.EMPTY, TileType.FOOD]:
+                self.map[prev_pos[1]][prev_pos[0]] = TileType.EMPTY
+                self.map[agent.pos[1]][agent.pos[0]] = TileType.PREPROGRAMMED_AGENT
             else:
                 agent.pos = prev_pos
         
         for agent, action in zip(self.drl_agent_sprites, drl_actions):
             prev_pos = agent.pos
             agent.update(action)
-            if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [0, 2]:
-                self.map[prev_pos[1]][prev_pos[0]] = 0
-                self.map[agent.pos[1]][agent.pos[0]] = 5
+            if prev_pos != agent.pos and self.map[agent.pos[1]][agent.pos[0]] in [TileType.EMPTY, TileType.FOOD]:
+                self.map[prev_pos[1]][prev_pos[0]] = TileType.EMPTY
+                self.map[agent.pos[1]][agent.pos[0]] = TileType.DRL_AGENT
             else:
                 agent.pos = prev_pos
 
@@ -190,14 +193,14 @@ class FoodGame:
                 self.playable_agent_food_collected += 1
                 self.foods.remove(food)
                 self.foods = Food.generate_foods(self.map, 1, self.foods)
-                self.map[self.foods[-1].y][self.foods[-1].x] = 2
+                self.map[self.foods[-1].y][self.foods[-1].x] = TileType.FOOD
 
             for agent in self.preprogrammed_agents:
                 if agent.pos == food.pos:
                     self.preprogrammed_agent_food_collected += 1
                     self.foods.remove(food)
                     self.foods = Food.generate_foods(self.map, 1, self.foods)
-                    self.map[self.foods[-1].y][self.foods[-1].x] = 2
+                    self.map[self.foods[-1].y][self.foods[-1].x] = TileType.FOOD
 
             for agent in self.drl_agent_sprites:
                 if agent.pos == food.pos:
@@ -205,7 +208,7 @@ class FoodGame:
                     self.drl_agent_sprite_food_collected += 1
                     self.foods.remove(food)
                     self.foods = Food.generate_foods(self.map, 1, self.foods)
-                    self.map[self.foods[-1].y][self.foods[-1].x] = 2
+                    self.map[self.foods[-1].y][self.foods[-1].x] = TileType.FOOD
     
     def _check_enemies_nearby(self):
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
@@ -213,7 +216,7 @@ class FoodGame:
             for x, y in directions:
                 if drl_agent.y + y >= 0 and drl_agent.y + y < self.rows and \
                 drl_agent.x + x >= 0 and drl_agent.x + x < self.cols and \
-                self.map[drl_agent.y + y][drl_agent.x + x] in [3, 4]:
+                self.map[drl_agent.y + y][drl_agent.x + x] in [TileType.PREPROGRAMMED_AGENT, TileType.PLAYABLE_AGENT]:
                     drl_agent.hp -= 10
             if drl_agent.hp < 100:
                 drl_agent.hp += 1
@@ -222,7 +225,7 @@ class FoodGame:
             for x, y in directions:
                 if preprog_agent.y + y >= 0 and preprog_agent.y + y < self.rows and \
                 preprog_agent.x + x >= 0 and preprog_agent.x + x < self.cols and \
-                self.map[preprog_agent.y + y][preprog_agent.x + x] in [3, 5]:
+                self.map[preprog_agent.y + y][preprog_agent.x + x] in [TileType.DRL_AGENT, TileType.PLAYABLE_AGENT]:
                     preprog_agent.hp -= 10
             if preprog_agent.hp < 100:
                 preprog_agent.hp += 1
@@ -231,7 +234,7 @@ class FoodGame:
             for x, y in directions:
                 if self.playable_agent.y + y >= 0 and self.playable_agent.y + y < self.rows and \
                 self.playable_agent.x + x >= 0 and self.playable_agent.x + x < self.cols and \
-                self.map[self.playable_agent.y + y][self.playable_agent.x + x] in [4, 5]:
+                self.map[self.playable_agent.y + y][self.playable_agent.x + x] in [TileType.DRL_AGENT, TileType.PREPROGRAMMED_AGENT]:
                     self.playable_agent.hp -= 10
             if self.playable_agent.hp < 100:
                 self.playable_agent.hp += 1
@@ -252,13 +255,13 @@ class FoodGame:
                 survived_preprog_agents.append(agent)
             else:
                 self.respawn_queue.append('preprogrammed_agent')
-                self.map[agent.y][agent.x] = 0
+                self.map[agent.y][agent.x] = TileType.EMPTY
         self.preprogrammed_agents = survived_preprog_agents
 
         if self.playable_agent.hp <= 0 and self.playable_agent.is_alive:
             self.playable_agent.is_alive = False
             self.respawn_queue.append('playable_agent')
-            self.map[self.playable_agent.y][self.playable_agent.x] = 0
+            self.map[self.playable_agent.y][self.playable_agent.x] = TileType.EMPTY
         
         
     

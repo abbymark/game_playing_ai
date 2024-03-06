@@ -1,3 +1,5 @@
+from game_playing_ai.games.food_game.food_game import TileType
+
 import random
 
 
@@ -38,10 +40,10 @@ class DRLAgentSprite():
 
 
     def set_pos_in_map(self, map):
-        while map[self.y][self.x] != 0:
+        while map[self.y][self.x] != TileType.EMPTY:
             self.x = random.randint(0, self.cols - 1)
             self.y = random.randint(0, self.rows - 1)
-        map[self.y][self.x] = 5
+        map[self.y][self.x] = TileType.DRL_AGENT
         return map
 
     @property
@@ -55,7 +57,7 @@ class DRLAgentSprite():
 
     def get_obs(self, map):
         map = map.copy()
-        map[self.y][self.x] = 6
+        map[self.y][self.x] = TileType.AGENT_LOCATION
         return map
     
     def increase_food_collected(self):

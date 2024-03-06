@@ -1,3 +1,5 @@
+from game_playing_ai.games.food_game.food_game import TileType
+
 import pygame
 
 class Environment:
@@ -41,40 +43,36 @@ class Environment:
         self.drl_agent.fill(self.colors["yellow"])
         self.drl_agent_rect = self.drl_agent.get_rect()
 
-        # self.image = pygame.Surface((self.cell_width, self.cell_height))
-        # self.image.fill((0, 0, 0))
-        # self.rect = self.image.get_rect()
-
 
     def draw(self, map):
         for i in range(self.rows):
             for j in range(self.cols):
-                if map[i][j] == 0:
+                if map[i][j] == TileType.EMPTY:
                     self.rect = self.empty_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.empty, self.rect)
-                elif map[i][j] == 1:
+                elif map[i][j] == TileType.OBSTACLE:
                     self.rect = self.obstacle_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.obstacle, self.rect)
-                elif map[i][j] == 2:
+                elif map[i][j] == TileType.FOOD:
                     self.rect = self.food_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.food, self.rect)
-                elif map[i][j] == 3:
+                elif map[i][j] == TileType.PLAYABLE_AGENT:
                     self.rect = self.playable_agent_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.playable_agent, self.rect)
-                elif map[i][j] == 4:
+                elif map[i][j] == TileType.PREPROGRAMMED_AGENT:
                     self.rect = self.preprogrammed_agent_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height
                     self.screen.blit(self.preprogrammed_agent, self.rect)
-                elif map[i][j] == 5:
+                elif map[i][j] == TileType.DRL_AGENT:
                     self.rect = self.drl_agent_rect
                     self.rect.x = j * self.cell_width
                     self.rect.y = i * self.cell_height

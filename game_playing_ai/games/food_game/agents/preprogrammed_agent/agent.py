@@ -1,3 +1,5 @@
+from game_playing_ai.games.food_game.food_game import TileType
+
 import pygame
 from scipy.spatial import KDTree
 
@@ -67,7 +69,7 @@ class PreprogrammedAgent:
             dr, dc = v
             r, c = self.y + dr, self.x + dc
             if 0 <= r < self.rows and 0 <= c < self.cols:
-                if map[r][c] not in [1, 3, 5]:
+                if map[r][c] not in [TileType.OBSTACLE, TileType.PLAYABLE_AGENT, TileType.DRL_AGENT]:
                     possible_actions.append(k)
         if len(possible_actions) == 0:
             return random.choice([0, 1, 2, 3])
@@ -119,7 +121,7 @@ class PreprogrammedAgent:
                     neighbor = current[0] + i, current[1] + j
                     tentative_g_score = gscore[current] + 1
 
-                    if 0 <= neighbor[0] < len(map[0]) and 0 <= neighbor[1] < len(map) and map[neighbor[1]][neighbor[0]] in [0, 2]:
+                    if 0 <= neighbor[0] < len(map[0]) and 0 <= neighbor[1] < len(map) and map[neighbor[1]][neighbor[0]] in [TileType.EMPTY, TileType.FOOD]:
                         if neighbor not in close_set and (neighbor not in gscore or tentative_g_score < gscore[neighbor]):
                             came_from[neighbor] = current
                             gscore[neighbor] = tentative_g_score
@@ -143,10 +145,10 @@ class PreprogrammedAgent:
 
     
     def set_pos_in_map(self, map):
-        while map[self.y][self.x] != 0:
+        while map[self.y][self.x] != TileType.EMPTY:
             self.x = random.randint(0, self.cols - 1)
             self.y = random.randint(0, self.rows - 1)
-        map[self.y][self.x] = 4
+        map[self.y][self.x] = TileType.PREPROGRAMMED_AGENT
         return map
 
     @property
@@ -160,5 +162,5 @@ class PreprogrammedAgent:
     
     def get_obs(self, map):
         map = map.copy()
-        map[self.y][self.x] = 6
+        map[self.y][self.x] = TileType.AGENT_LOCATION
         return map
