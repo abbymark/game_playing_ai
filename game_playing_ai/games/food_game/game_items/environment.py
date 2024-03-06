@@ -1,4 +1,4 @@
-from game_playing_ai.games.food_game.food_game import TileType
+from game_playing_ai.games.food_game.TileType import TileType
 
 import pygame
 

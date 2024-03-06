@@ -1,3 +1,4 @@
+from game_playing_ai.games.food_game.TileType import TileType
 from game_playing_ai.games.food_game.agents.drl_agent.DRLAgentSprite import DRLAgentSprite
 from game_playing_ai.games.food_game.game_items.environment import Environment
 from game_playing_ai.games.food_game.agents.preprogrammed_agent.agent import PreprogrammedAgent
@@ -16,21 +17,6 @@ import datetime
 from typing import Dict, List, Literal
 import json
 from collections import deque
-
-
-class TileType:
-    EMPTY = 0
-    OBSTACLE = 1
-    FOOD = 2
-    PLAYABLE_AGENT = 3
-    PREPROGRAMMED_AGENT = 4
-    DRL_AGENT = 5
-    AGENT_LOCATION = 6
-
-    @classmethod
-    def __len__(cls):
-        return len([attr for attr in dir(cls) if not attr.startswith('_') and not callable(getattr(cls, attr))])
-
 
 
 class FoodGame:
