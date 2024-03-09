@@ -13,13 +13,10 @@ class DQNTrainer:
         pass
 
     def train_drl_agent(self, config:Dict[str, str]):
-        if config['multi_agent']:
-            env = MultiAgentFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
-                           config['food_count'], config['solo'], config['num_drl_agents'], config['num_preprogrammed_agents'],
-                           config['obstacles'], config['combat'])
-        else:
-            env = SingleAgentFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
-                            config['food_count'], config['solo'])
+        env = MultiAgentFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
+                        config['food_count'], config['solo'], config['num_drl_agents'], config['num_preprogrammed_agents'],
+                        config['obstacles'], config['combat'])
+
         action_size = 4
 
 
