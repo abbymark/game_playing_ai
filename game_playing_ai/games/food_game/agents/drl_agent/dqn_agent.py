@@ -51,6 +51,7 @@ class DQNAgent:
             wandb.login()
             wandb.init(
                 project="food_game",
+                name=f"DQN_rows{self.rows}_cols{self.cols}",
                 config={
                     "DRL_algorithm": "DQN",
                     "rows": self.rows,
@@ -107,7 +108,7 @@ class DQNAgent:
         # Convert numpy arrays to PyTorch tensors
         states = torch.LongTensor(states).to(device)
         flat_states = states.view(states.shape[0], -1)
-        one_hot_flat_states = nn.functional.one_hot(flat_states, num_classes=7).float()
+        one_hot_flat_states = nn.functional.one_hot(flat_states, num_classes=self.num_input_channels).float()
         states = one_hot_flat_states.view(*states.shape, -1)
         states = states.permute(0, 3, 1, 2).contiguous()
 
@@ -116,7 +117,7 @@ class DQNAgent:
 
         next_states = torch.LongTensor(next_states).to(device)
         flat_next_states = next_states.view(next_states.shape[0], -1)
-        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=7).float()
+        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=self.num_input_channels).float()
         next_states = one_hot_flat_next_states.view(*next_states.shape, -1)
         next_states = next_states.permute(0, 3, 1, 2).contiguous()
 

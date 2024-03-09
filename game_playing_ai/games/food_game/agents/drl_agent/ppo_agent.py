@@ -29,12 +29,12 @@ class Memory:
         self.lambda_gae = lambda_gae
     
     def remember(self, state, action, log_prob, val, reward, done):
-        self.states.append(state)
-        self.actions.append(action)
-        self.log_probs.append(log_prob)
-        self.values.append(val)
-        self.rewards.append(reward)
-        self.dones.append(done)
+        self.states.extend(state)
+        self.actions.extend(action)
+        self.log_probs.extend(log_prob)
+        self.values.extend(val)
+        self.rewards.extend(reward)
+        self.dones.extend(done)
 
     def clear_memory(self):
         self.states = []
@@ -117,6 +117,7 @@ class PPOAgent:
             wandb.login()
             wandb.init(
                 project="food_game",
+                name=f"PPO_rows{self.rows}_cols{self.cols}",
                 config={
                     "DRL_algorithm": "PPO",
                     "rows": self.rows,
@@ -152,7 +153,7 @@ class PPOAgent:
     def act(self, state):
         state = torch.LongTensor(state).unsqueeze(0).to(device)
         flat_next_states = state.view(state.shape[0], -1)
-        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=6).float()
+        one_hot_flat_next_states = nn.functional.one_hot(flat_next_states, num_classes=self.num_input_channels).float()
         state = one_hot_flat_next_states.view(*state.shape, -1)
         state = state.permute(0, 3, 1, 2).contiguous()
         prob = self.actor(state)
@@ -196,7 +197,7 @@ class PPOAgent:
                 # Convert numpy arrays to pytorch tensors
                 batch_states = torch.LongTensor(batch_states).to(device)
                 batch_flat_states = batch_states.view(batch_states.shape[0], -1)
-                batch_one_hot_flat_states = nn.functional.one_hot(batch_flat_states, num_classes=6).float()
+                batch_one_hot_flat_states = nn.functional.one_hot(batch_flat_states, num_classes=self.num_input_channels).float()
                 batch_states = batch_one_hot_flat_states.view(*batch_states.shape, -1)
                 batch_states = batch_states.permute(0, 3, 1, 2).contiguous()
 
@@ -226,7 +227,7 @@ class PPOAgent:
                 
 
                 loss = actor_loss + 0.5 * critic_loss - self.entropy_coef * entropy_bonus
-
+                
                 self.actor_optimizer.zero_grad()
                 self.critic_optimizer.zero_grad()
                 loss.backward()
