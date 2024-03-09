@@ -5,11 +5,8 @@ from game_playing_ai.pages.food_game_run_page import FoodGameRunPage
 from game_playing_ai.pages.main_page import MainPage
 
 import pygame
-import pygame_gui
 
 import sys
-import threading
-import json
 class GameStarter:
     def __init__(self):
         pygame.init()
@@ -60,7 +57,7 @@ class GameStarter:
                 sys.exit()
         
     
-    def _update(self, events):
+    def _update(self):
         self.main_page.update(self.time_delta)
         self.food_game_train_page.update(self.time_delta)
         self.food_game_run_page.update(self.time_delta)
