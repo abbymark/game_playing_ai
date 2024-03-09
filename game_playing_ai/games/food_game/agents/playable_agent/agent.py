@@ -1,3 +1,5 @@
+from game_playing_ai.games.food_game.tile_type import TileType
+
 import pygame
 
 import random
@@ -6,6 +8,9 @@ class PlayableAgent:
         self.rows = rows
         self.cols = cols
         self.food_collected = 0
+        self.hp = 100
+        self.is_alive = True
+
         if pos is None:
             self.x = random.randint(0, cols - 1)
             self.y = random.randint(0, rows - 1)
@@ -36,10 +41,10 @@ class PlayableAgent:
                     self.y = new_y
     
     def set_pos_in_map(self, map):
-        while map[self.y][self.x] != 0 and map[self.y][self.x] != 3:
+        while map[self.y][self.x] != TileType.EMPTY:
             self.x = random.randint(0, self.cols - 1)
             self.y = random.randint(0, self.rows - 1)
-        map[self.y][self.x] = 3
+        map[self.y][self.x] = TileType.PLAYABLE_AGENT
         return map
 
     @property

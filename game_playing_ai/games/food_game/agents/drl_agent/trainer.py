@@ -1,4 +1,4 @@
-from game_playing_ai.games.food_game.food_game import GridFoodGame
+from game_playing_ai.games.food_game.environments.multi_agent_food_game import MultiAgentFoodGame
 from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgent
 from game_playing_ai.games.food_game.agents.drl_agent.ppo_agent import PPOAgent, Memory
 
@@ -12,34 +12,39 @@ class DQNTrainer:
         pass
 
     def train_drl_agent(self, config:Dict[str, str]):
-        env = GridFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
-                           config['food_count'], config['solo'])
-        action_size = env.action_space.n
+        env = MultiAgentFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
+                        config['food_count'], config['solo'], config['num_drl_agents'], config['num_preprogrammed_agents'],
+                        config['obstacles'], config['combat'])
+
+        action_size = 4
+
 
         agent = DQNAgent(env.rows, env.cols, action_size, 
                          config['memory_size'], config['gamma'], 
                          config['epsilon_min'], config['epsilon_decay'], 
                         config['batch_size'], config['learning_rate'],  
-                        config['target_update_freq'], config['nn_type'], 
-                        is_training=True, num_input_channels=6)
-
-        # sorted_models = sorted(os.listdir("data/models"), reverse=True)
-        # if len(sorted_models) > 0:
-        #     agent.load(f"data/models/{sorted_models[0]}")
-
-
+                        config['target_update_freq'], config['nn_type'], config['solo'],
+                        config['num_drl_agents'], config['num_preprogrammed_agents'],
+                        config['obstacles'], config['combat'],
+                        is_training=True, num_input_channels=7)
+        
 
         for e in range(config["episodes"]):
-            state, info = env.reset()
+            states = env.reset()
 
             step_count = 0
             done = False
             while not done:
-                action = agent.act(state)
+                actions = []
+                for state in states:
+                    action = agent.act(state)
+                    actions.append(action)
                 
-                next_state, reward, done, *_ = env.step(action)
-                agent.remember(state, action, reward, next_state, done)
-                state = next_state
+                next_states, rewards, dones, *_ = env.step(actions)
+                done = any(dones)
+                for i in range(len(states)):
+                    agent.remember(states[i], actions[i], rewards[i], next_states[i], dones[i])
+                states = next_states
 
                 agent.replay()
                 step_count += 1
@@ -61,28 +66,39 @@ class PPOTrainer:
     def train_drl_agent(self, config:Dict[str, str]):
         memory = Memory(config['gamma'], config['lambda_gae'])
 
-        env = GridFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
-                           config['food_count'], config['solo'])
-        action_size = env.action_space.n
+        env = MultiAgentFoodGame(config["render"], config['map_size_rows'], config['map_size_cols'], 
+                        config['food_count'], config['solo'], config['num_drl_agents'], config['num_preprogrammed_agents'],
+                        config['obstacles'], config['combat'])
+        action_size = 4
                              
         agent = PPOAgent(env.rows, env.cols, action_size, 
                          config['gamma'], config['lambda_gae'], 
                          config['epsilon'], config['batch_size'], 
-                         config['learning_rate'], config['nn_type'], 
-                         is_training=True, num_input_channels=6, 
+                         config['learning_rate'], config['nn_type'], config['solo'],
+                         config['num_drl_agents'], config['num_preprogrammed_agents'],
+                         config['obstacles'], config['combat'],
+                         is_training=True, num_input_channels=7, 
                          entropy_coef=config['entropy_coef'], epochs=config['epochs'])
         
         for e in range(config["episodes"]):
-            state, info = env.reset()
+            states= env.reset()
 
             step_count = 0
             done = False
             while not done:
-                action, log_prob, value = agent.act(state)
+                actions = []
+                log_probs = []
+                values = []
+                for state in states:
+                    action, log_prob, value = agent.act(state)
+                    actions.append(action)
+                    log_probs.append(log_prob)
+                    values.append(value)
                 
-                next_state, reward, done, *_ = env.step(action)
-                memory.remember(state, action, log_prob, value, reward, done)
-                state = next_state
+                next_states, rewards, dones, *_ = env.step(actions)
+                done = any(dones)
+                memory.remember(states, actions, log_probs, values, rewards, dones)
+                states = next_states
 
                 step_count += 1
                 if step_count % config['num_timesteps'] == 0:
