@@ -23,7 +23,9 @@ class DQNTrainer:
                          config['memory_size'], config['gamma'], 
                          config['epsilon_min'], config['epsilon_decay'], 
                         config['batch_size'], config['learning_rate'],  
-                        config['target_update_freq'], config['nn_type'], 
+                        config['target_update_freq'], config['nn_type'], config['solo'],
+                        config['num_drl_agents'], config['num_preprogrammed_agents'],
+                        config['obstacles'], config['combat'],
                         is_training=True, num_input_channels=7)
         
 
@@ -48,10 +50,7 @@ class DQNTrainer:
                 step_count += 1
 
             if len(agent.memory) == config["memory_size"]:
-                agent.save({
-                    'num_drl_agents': config['num_drl_agents'],
-                    'num_preprogrammed_agents': config['num_preprogrammed_agents']
-                }, f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}")
+                agent.save(f"data/models/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_episode_{e}")
                 log = agent.get_log()
                 log.update({
                     "step_count": step_count,
@@ -75,7 +74,9 @@ class PPOTrainer:
         agent = PPOAgent(env.rows, env.cols, action_size, 
                          config['gamma'], config['lambda_gae'], 
                          config['epsilon'], config['batch_size'], 
-                         config['learning_rate'], config['nn_type'], 
+                         config['learning_rate'], config['nn_type'], config['solo'],
+                         config['num_drl_agents'], config['num_preprogrammed_agents'],
+                         config['obstacles'], config['combat'],
                          is_training=True, num_input_channels=7, 
                          entropy_coef=config['entropy_coef'], epochs=config['epochs'])
         

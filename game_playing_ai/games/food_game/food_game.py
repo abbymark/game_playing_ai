@@ -4,6 +4,7 @@ from game_playing_ai.games.food_game.game_items.environment import Environment
 from game_playing_ai.games.food_game.agents.preprogrammed_agent.agent import PreprogrammedAgent
 from game_playing_ai.games.food_game.agents.playable_agent.agent import PlayableAgent
 from game_playing_ai.games.food_game.agents.drl_agent.dqn_agent import DQNAgent
+from game_playing_ai.games.food_game.agents.drl_agent.ppo_agent import PPOAgent
 from game_playing_ai.games.food_game.game_items.food import Food
 from game_playing_ai.games.food_game.game_items.obstacle import place_obstacles
 
@@ -30,7 +31,7 @@ class FoodGame:
 
     def __init__(self, rows:int=30, cols:int=40, n_food:int=10, render_mode:Literal["human", "rgb_array"]="human", 
                  is_training:bool=False, solo:bool=False, num_drl_agents:int=1, num_preprogrammed_agents:int=1, drl_model_path:str=None,
-                 obstacles:bool=False, combat:bool=False):
+                 obstacles:bool=False, combat:bool=False, drl_algorithm:str="DQN") -> None:
         self.render_mode = render_mode
         self.solo = solo
         self.rows = rows
@@ -72,7 +73,7 @@ class FoodGame:
             self.map = agent.set_pos_in_map(self.map)
         
         if not is_training:
-            self.drl_agent = self._load_drl_agent(drl_model_path)
+            self.drl_agent = self._load_drl_agent(drl_model_path, drl_algorithm)
 
         self.drl_agent_sprites = [DRLAgentSprite(rows, cols) for _ in range(num_drl_agents)]
         for agent in self.drl_agent_sprites:
@@ -84,10 +85,13 @@ class FoodGame:
         for food in self.foods:
             self.map[food.y][food.x] = TileType.FOOD
     
-    def _load_drl_agent(self, drl_model_path:str):
+    def _load_drl_agent(self, drl_model_path:str, drl_algorithm:str):
         if drl_model_path is None:
             raise ValueError("drl_model_path is required")
-        return DQNAgent.load(drl_model_path, is_training=False)
+        elif drl_algorithm == "DQN":
+            return DQNAgent.load(drl_model_path, is_training=False)
+        elif drl_algorithm == "PPO":
+            return PPOAgent.load(drl_model_path, is_training=False)
 
 
     def run(self):
@@ -98,7 +102,10 @@ class FoodGame:
 
             drl_actions = []
             for agent in self.drl_agent_sprites:
-                drl_actions.append(self.drl_agent.act(agent.get_obs(self.map)))
+                if isinstance(self.drl_agent, DQNAgent):
+                    drl_actions.append(self.drl_agent.act(agent.get_obs(self.map)))
+                elif isinstance(self.drl_agent, PPOAgent):
+                    drl_actions.append(self.drl_agent.act(agent.get_obs(self.map))[0])
             
             preprogrammed_actions = []
             for agent in self.preprogrammed_agents:

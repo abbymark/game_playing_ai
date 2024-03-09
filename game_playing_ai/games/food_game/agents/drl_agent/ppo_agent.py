@@ -82,7 +82,9 @@ class Memory:
 class PPOAgent:
     def __init__(self, rows:int, cols:int, action_size:int, gamma:float=0.95, 
                  lambda_gae:float=0.95, epsilon:float=0.2, batch_size:int=32,
-                 learning_rate:float=0.0001, nn_type:str="CNN", is_training:bool=True,
+                 learning_rate:float=0.0001, nn_type:str="CNN", solo:bool=True,
+                 num_drl_agents:int=1, num_preprogrammed_agents:int=0,
+                 obstacles:bool=False, combat:bool=False, is_training:bool=True,
                  num_input_channels=6, entropy_coef:float=0.01, epochs=5) -> None:
         self.rows = rows
         self.cols = cols
@@ -94,6 +96,11 @@ class PPOAgent:
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.nn_type = nn_type
+        self.solo = solo
+        self.num_drl_agents = num_drl_agents
+        self.num_preprogrammed_agents = num_preprogrammed_agents
+        self.obstacles = obstacles
+        self.combat = combat
         self.is_training = is_training
         self.num_input_channels = num_input_channels
         self.entropy_coef = entropy_coef
@@ -117,7 +124,7 @@ class PPOAgent:
             wandb.login()
             wandb.init(
                 project="food_game",
-                name=f"PPO_rows{self.rows}_cols{self.cols}",
+                name=f"PPO_r:{self.rows}_c:{self.cols}_n_drl:{num_drl_agents}_n_pre{num_preprogrammed_agents}_obs:{obstacles}_combat:{combat}_solo:{solo}",
                 config={
                     "DRL_algorithm": "PPO",
                     "rows": self.rows,
@@ -129,7 +136,11 @@ class PPOAgent:
                     "batch_size": self.batch_size,
                     "learning_rate": self.learning_rate,
                     "nn_type": self.nn_type,
-                    "is_training": self.is_training,
+                    "solo": self.solo,
+                    "num_drl_agents": self.num_drl_agents,
+                    "num_preprogrammed_agents": self.num_preprogrammed_agents,
+                    "obstacles": self.obstacles,
+                    "combat": self.combat,
                     "num_input_channels": self.num_input_channels,
                     "entropy_coef": self.entropy_coef,
                     "epochs": self.epochs,
@@ -168,14 +179,49 @@ class PPOAgent:
             "actor_loss": self.actor_loss_sum,
             "critic_loss": self.critic_loss_sum,
         }
+
+    @staticmethod
+    def load(name:str, is_training:bool):
+        with open(f"{name}/config.json", "r") as f:
+            config = json.load(f)
+        agent = PPOAgent(config['rows'], config['cols'], config['action_size'], 
+                         nn_type=config['nn_type'], is_training=is_training, 
+                         num_input_channels=config['num_input_channels'],
+                         obstacles=config['obstacles'], combat=config['combat'],)
+        agent.actor.load_state_dict(torch.load(f"{name}/actor.pt"))
+        agent.critic.load_state_dict(torch.load(f"{name}/critic.pt"))
+        return agent
     
     def save(self, path:str):
-        torch.save(self.actor.state_dict(), f"{path}_actor.pt")
-        torch.save(self.critic.state_dict(), f"{path}_critic.pt")
+        os.makedirs(path, exist_ok=True)
+        torch.save(self.actor.state_dict(), f"{path}/actor.pt")
+        torch.save(self.critic.state_dict(), f"{path}/critic.pt")
 
-    def load(self, path:str):
-        self.actor.load_state_dict(torch.load(f"{path}_actor.pt"))
-        self.critic.load_state_dict(torch.load(f"{path}_critic.pt"))
+        save_params = {
+            "DRL_algorithm": "PPO",
+            "rows": self.rows,
+            "cols": self.cols,
+            "state_size": int(self.state_size),
+            "action_size": int(self.action_size),
+            "gamma": self.gamma,
+            "epsilon": self.epsilon,
+            "batch_size": self.batch_size,
+            "learning_rate": self.learning_rate,
+            "nn_type": self.nn_type,
+            "solo": self.solo,
+            "num_drl_agents": self.num_drl_agents,
+            "num_preprogrammed_agents": self.num_preprogrammed_agents,
+            "obstacles": self.obstacles,
+            "combat": self.combat,
+            "num_input_channels": self.num_input_channels,
+            "entropy_coef": self.entropy_coef,
+            "epochs": self.epochs,
+        }
+
+        with open(f"{path}/config.json", "w") as f:
+            json.dump(save_params, f, indent=4)
+
+
 
     def update(self, memory: Memory):
         self.steps += 1

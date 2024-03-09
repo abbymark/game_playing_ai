@@ -136,7 +136,6 @@ class PreprogrammedAgent:
                 path = path[::-1]
                 return self.action_from_direction[(path[0][0] - self.x, path[0][1] - self.y)]
 
-        breakpoint()
         return random.choice([0, 1, 2, 3])
 
 
