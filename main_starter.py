@@ -37,7 +37,7 @@ class GameStarter:
             self.time_delta = self.clock.tick(60)/1000.0
             events = pygame.event.get()
             self._events(events)
-            self._update(events)
+            self._update()
             self._draw()
     
     def _draw(self):
