@@ -1,3 +1,6 @@
+# DQN codes were referenced from https://github.com/patrickloeber/snake-ai-pytorch and modified to fit the game
+
+
 from game_playing_ai.games.food_game.agents.drl_agent.networks.dqn_networks import DNN
 from game_playing_ai.games.food_game.agents.drl_agent.networks.dqn_networks import CNN
 

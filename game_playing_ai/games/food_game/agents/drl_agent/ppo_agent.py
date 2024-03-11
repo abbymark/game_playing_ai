@@ -1,3 +1,5 @@
+# PPO codes were referenced from https://github.com/philtabor/Youtube-Code-Repository/blob/master/ReinforcementLearning/PolicyGradient/PPO/torch/main.py and modified to fit the game
+
 from game_playing_ai.games.food_game.agents.drl_agent.networks.ppo_networks import CNNActor, CNNCritic
 
 import numpy as np

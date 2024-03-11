@@ -1,3 +1,5 @@
+# A* codes were referenced from https://www.youtube.com/watch?v=JtiK0DOeI4A and modified to fit the game
+
 from game_playing_ai.games.food_game.tile_type import TileType
 
 import pygame
