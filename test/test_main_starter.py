@@ -4,8 +4,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 class TestGameStarter:
-
-
     @patch('main_starter.pygame')
     @patch('main_starter.MainPage')
     @patch('main_starter.FoodGameTrainPage')

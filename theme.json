@@ -1,0 +1,26 @@
+{
+    "#main_title":
+    {
+        "font":{
+            "size": 30
+        }
+    },
+    "#side_panel":
+    {
+        "colours": {
+            "dark_bg": "#505050"
+        }
+    },
+    "#side_panel_label":
+    {
+        "font":{
+            "size": 20
+        }
+    },
+    "#config_panel":
+    {
+        "colours": {
+            "dark_bg": "#101010"
+        }
+    }
+}
